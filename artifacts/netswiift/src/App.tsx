@@ -12,6 +12,7 @@ import TransactionsPage from "@/pages/TransactionsPage";
 import Profile from "@/pages/Profile";
 import BulkOrders from "@/pages/BulkOrders";
 import Admin from "@/pages/Admin";
+import Agent from "@/pages/Agent";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/profile" component={Profile} />
       <Route path="/bulk-orders" component={BulkOrders} />
       <Route path="/admin" component={Admin} />
+      <Route path="/agent" component={Agent} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -42,7 +44,7 @@ function App() {
           <Router />
         </WouterRouter>
         <Toaster />
-        <SonnerToaster position="top-center" theme="dark" richColors />
+        <SonnerToaster position="top-center" theme="dark" richColors closeButton offset={72} toastOptions={{ style: { zIndex: 9999 } }} />
       </TooltipProvider>
     </QueryClientProvider>
   );

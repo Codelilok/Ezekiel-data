@@ -132,7 +132,13 @@ function HeroAuthSection() {
           setLocation("/admin");
           return;
         }
-        localStorage.setItem("nsUser", JSON.stringify({ name: existing.name, email: existing.email }));
+        if (existing.role === "agent") {
+          localStorage.setItem("nsUser", JSON.stringify({ name: existing.name, email: existing.email, role: "agent" }));
+          toast.success(`Welcome back, ${existing.name}`);
+          setLocation("/agent");
+          return;
+        }
+        localStorage.setItem("nsUser", JSON.stringify({ name: existing.name, email: existing.email, role: existing.role ?? "user" }));
       } else {
         const name = loginEmail.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
         saveUser(name, loginEmail);
@@ -173,34 +179,34 @@ function HeroAuthSection() {
   }
 
   return (
-    <section id="hero" className="container mx-auto px-4 py-20 lg:py-32 flex flex-col lg:flex-row items-center gap-12 lg:gap-24 relative">
+    <section id="hero" className="container mx-auto px-4 py-8 sm:py-16 lg:py-32 flex flex-col lg:flex-row items-center gap-8 lg:gap-24 relative">
       <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-teal-500/20 rounded-full blur-[128px] pointer-events-none" />
       <div className="absolute top-1/2 right-1/4 translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-600/20 rounded-full blur-[128px] pointer-events-none" />
 
-      <div className="flex-1 space-y-8 z-10 text-center lg:text-left">
+      <div className="flex-1 space-y-5 sm:space-y-8 z-10 text-center lg:text-left order-last lg:order-first">
         <div className="inline-flex items-center rounded-full border border-teal-500/30 bg-teal-500/10 px-3 py-1 text-sm font-medium text-teal-400">
           <span className="flex h-2 w-2 rounded-full bg-teal-500 mr-2 animate-pulse"></span>
           Lightning fast delivery
         </div>
-        <h1 className="text-5xl lg:text-7xl font-extrabold tracking-tight text-foreground">
+        <h1 className="text-3xl sm:text-5xl lg:text-7xl font-extrabold tracking-tight text-foreground">
           Buy Data Instantly<br />
           <span className="text-muted-foreground font-light">No Signup Needed.</span>
         </h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto lg:mx-0">
+        <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto lg:mx-0">
           Fast, secure data purchase for all networks. Experience the future of mobile connectivity with premium fintech-grade reliability.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-          <Button size="lg" className="h-14 px-8 text-base bg-gradient-to-r from-teal-500 to-teal-400 hover:from-teal-400 hover:to-teal-300 text-teal-950 font-bold border-none shadow-[0_0_40px_-10px_rgba(20,184,166,0.5)] transition-all hover:scale-105" onClick={() => scrollTo('buy')}>
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
+          <Button size="lg" className="h-12 sm:h-14 px-8 text-base bg-gradient-to-r from-teal-500 to-teal-400 hover:from-teal-400 hover:to-teal-300 text-teal-950 font-bold border-none shadow-[0_0_40px_-10px_rgba(20,184,166,0.5)] transition-all hover:scale-105" onClick={() => scrollTo('buy')}>
             Buy Data Now
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
-          <Button size="lg" variant="outline" className="h-14 px-8 text-base border-white/10 bg-white/5 hover:bg-white/10" onClick={() => scrollTo('track')}>
+          <Button size="lg" variant="outline" className="h-12 sm:h-14 px-8 text-base border-white/10 bg-white/5 hover:bg-white/10" onClick={() => scrollTo('track')}>
             Track Order
           </Button>
         </div>
       </div>
 
-      <div className="w-full max-w-md z-10">
+      <div className="w-full max-w-md z-10 order-first lg:order-last">
         <Card className="border-white/10 bg-card/60 backdrop-blur-2xl shadow-2xl shadow-black/50">
           <CardHeader className="pb-2">
             <CardTitle>Welcome to NetSwift</CardTitle>
@@ -396,7 +402,7 @@ function BuyDataSection() {
   };
 
   return (
-    <section id="buy" className="py-24 relative overflow-hidden">
+    <section id="buy" className="py-14 md:py-24 relative overflow-hidden">
       <div className="container mx-auto px-4 max-w-3xl">
         <div className="text-center mb-12">
           <h2 className="text-3xl lg:text-4xl font-bold mb-4">Instant Data Purchase</h2>
@@ -413,7 +419,7 @@ function BuyDataSection() {
             />
           </div>
 
-          <CardContent className="p-8 lg:p-12 min-h-[400px] flex flex-col justify-center">
+          <CardContent className="p-5 sm:p-8 lg:p-12 min-h-[360px] sm:min-h-[400px] flex flex-col justify-center">
             <AnimatePresence mode="wait">
               {step === 1 && (
                 <motion.div key="step1" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6">
@@ -573,7 +579,7 @@ function TrackOrderSection() {
   };
 
   return (
-    <section id="track" className="py-24 bg-black/20">
+    <section id="track" className="py-14 md:py-24 bg-black/20">
       <div className="container mx-auto px-4 max-w-2xl">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4">Track Your Order</h2>
@@ -771,7 +777,7 @@ function SupportSection() {
   };
 
   return (
-    <section id="support" className="py-24">
+    <section id="support" className="py-14 md:py-24">
       <div className="container mx-auto px-4 max-w-2xl">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4">Make a Complaint</h2>
