@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useTrackOrder, getTrackOrderQueryKey, useCreateOrder } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
+import { useGoogleLogin } from "@react-oauth/google";
 
 // Smooth scrolling utility
 const scrollTo = (id: string) => {
@@ -97,10 +98,30 @@ function HeroAuthSection() {
     localStorage.setItem("nsUser", JSON.stringify({ name, email }));
   }
 
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+        });
+        const profile = await res.json();
+        saveUser(profile.name ?? profile.email.split("@")[0], profile.email);
+        toast.success(`Welcome, ${profile.name?.split(" ")[0] ?? "there"}!`);
+        setLocation("/dashboard");
+      } catch {
+        toast.error("Failed to get Google profile. Please try email login.");
+      }
+    },
+    onError: () => toast.error("Google sign-in was cancelled or failed."),
+  });
+
   function handleGoogleAuth() {
-    saveUser("Alex Johnson", "alex.johnson@gmail.com");
-    toast.success("Signed in with Google");
-    setTimeout(() => setLocation("/dashboard"), 600);
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      toast.error("Google sign-in isn't configured yet. Please use email login.", { duration: 4000 });
+      return;
+    }
+    googleLogin();
   }
 
   function handleLogin(e: React.FormEvent) {
