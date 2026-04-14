@@ -47,7 +47,7 @@ router.post("/orders", async (req, res): Promise<void> => {
   }
 
   const orderId =
-    "NSW-" +
+    "NS-" +
     Math.random().toString(36).substring(2, 10).toUpperCase();
 
   const statuses = ["pending", "completed", "completed", "completed"];

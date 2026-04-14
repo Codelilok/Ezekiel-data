@@ -99,7 +99,12 @@ function HeroAuthSection() {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [magicSent, setMagicSent] = useState(false);
 
+  function saveUser(name: string, email: string) {
+    localStorage.setItem("nsUser", JSON.stringify({ name, email }));
+  }
+
   function handleGoogleAuth() {
+    saveUser("Alex Johnson", "alex.johnson@gmail.com");
     toast.success("Signed in with Google");
     setTimeout(() => setLocation("/dashboard"), 600);
   }
@@ -111,6 +116,8 @@ function HeroAuthSection() {
     setLoginLoading(true);
     setTimeout(() => {
       setLoginLoading(false);
+      const name = loginEmail.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      saveUser(name, loginEmail);
       toast.success("Logged in successfully");
       setLocation("/dashboard");
     }, 1000);
@@ -124,6 +131,7 @@ function HeroAuthSection() {
     setSignupLoading(true);
     setTimeout(() => {
       setSignupLoading(false);
+      saveUser(signupName, signupEmail);
       toast.success("Account created! Welcome to NetSwift");
       setLocation("/dashboard");
     }, 1000);
@@ -614,17 +622,114 @@ function TrackOrderSection() {
             </Card>
           </motion.div>
         )}
+
+        <ComplaintButton prefillRef={submittedQuery} />
       </div>
     </section>
+  );
+}
+
+function ComplaintButton({ prefillRef }: { prefillRef?: string }) {
+  const [open, setOpen] = useState(false);
+  const [ref, setRef] = useState(prefillRef || "");
+  const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+
+  React.useEffect(() => {
+    if (prefillRef) setRef(prefillRef);
+  }, [prefillRef]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!ref) { toast.error("Please enter your order ID or phone number"); return; }
+    if (!message) { toast.error("Please describe your issue"); return; }
+    setSubmitting(true);
+    setTimeout(() => {
+      setSubmitting(false);
+      setDone(true);
+      toast.success("Complaint submitted — we'll get back to you shortly");
+    }, 1400);
+  }
+
+  return (
+    <div className="mt-8">
+      <AnimatePresence mode="wait">
+        {!open && !done && (
+          <motion.div key="btn" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center">
+            <button
+              onClick={() => setOpen(true)}
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-red-400 transition-colors border border-white/10 hover:border-red-400/30 rounded-full px-5 py-2 bg-white/3 hover:bg-red-400/5"
+            >
+              <AlertCircle className="w-4 h-4" />
+              Having an issue with your order? Make a complaint
+            </button>
+          </motion.div>
+        )}
+        {open && !done && (
+          <motion.div key="form" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+            <Card className="border-red-500/20 bg-red-500/5 backdrop-blur-md">
+              <CardContent className="p-6 space-y-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
+                    <AlertCircle className="w-4 h-4 text-red-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white text-sm">Make a Complaint</p>
+                    <p className="text-xs text-muted-foreground">We'll look into it and respond promptly</p>
+                  </div>
+                </div>
+                <form onSubmit={handleSubmit} className="space-y-3">
+                  <Input
+                    value={ref}
+                    onChange={e => setRef(e.target.value)}
+                    placeholder="Order ID or Phone Number (e.g. NS-XXXXXX or 024XXXXXXX)"
+                    className="h-12 bg-black/20 border-white/10 focus-visible:ring-red-400 font-mono"
+                  />
+                  <Textarea
+                    value={message}
+                    onChange={e => setMessage(e.target.value)}
+                    placeholder="Describe your issue in detail..."
+                    className="min-h-[100px] bg-black/20 border-white/10 focus-visible:ring-red-400 resize-none"
+                  />
+                  <div className="flex gap-3">
+                    <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="flex-1 text-muted-foreground">Cancel</Button>
+                    <Button type="submit" className="flex-[2] h-11 bg-red-500/80 hover:bg-red-500 text-white border-none" disabled={submitting}>
+                      {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                      {submitting ? "Submitting..." : "Submit Complaint"}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+        {done && (
+          <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-6 space-y-3">
+            <div className="w-12 h-12 bg-teal-500/20 rounded-full flex items-center justify-center mx-auto">
+              <Check className="w-6 h-6 text-teal-400" />
+            </div>
+            <p className="font-semibold text-white">Complaint Received</p>
+            <p className="text-sm text-muted-foreground">We'll review your complaint and respond shortly.</p>
+            <button onClick={() => { setDone(false); setOpen(false); setRef(""); setMessage(""); }} className="text-xs text-teal-400 hover:text-teal-300">Submit another</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
 function SupportSection() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [orderRef, setOrderRef] = useState("");
+  const [phone, setPhone] = useState("");
+  const [message, setMessage] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!orderRef && !phone) { toast.error("Please enter your order ID or phone number"); return; }
+    if (!message) { toast.error("Please describe your issue"); return; }
     setIsSubmitting(true);
     setTimeout(() => {
       setIsSubmitting(false);
@@ -637,8 +742,8 @@ function SupportSection() {
     <section id="support" className="py-24">
       <div className="container mx-auto px-4 max-w-2xl">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Get Support</h2>
-          <p className="text-muted-foreground">Having issues? We're here to help.</p>
+          <h2 className="text-3xl font-bold mb-4">Make a Complaint</h2>
+          <p className="text-muted-foreground">Having an issue with your order? Let us know and we'll resolve it.</p>
         </div>
 
         <Card className="border-white/10 bg-background/40 backdrop-blur-md">
@@ -648,34 +753,44 @@ function SupportSection() {
                 <div className="w-16 h-16 bg-teal-500/20 text-teal-400 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Check className="w-8 h-8" />
                 </div>
-                <h3 className="text-xl font-bold text-white">Message Received</h3>
-                <p className="text-muted-foreground">Your complaint has been received. We'll reach out shortly.</p>
-                <Button variant="outline" onClick={() => setSuccess(false)} className="mt-8">
-                  Send Another Message
+                <h3 className="text-xl font-bold text-white">Complaint Received</h3>
+                <p className="text-muted-foreground">We've received your complaint and will reach out to you shortly.</p>
+                <Button variant="outline" onClick={() => { setSuccess(false); setOrderRef(""); setPhone(""); setMessage(""); }} className="mt-8 border-white/10 bg-white/5">
+                  Submit Another
                 </Button>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Name</label>
-                    <Input required className="bg-black/20 border-white/10 focus-visible:ring-teal-500" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Email</label>
-                    <Input type="email" required className="bg-black/20 border-white/10 focus-visible:ring-teal-500" />
-                  </div>
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Order ID</label>
+                  <Input
+                    value={orderRef}
+                    onChange={e => setOrderRef(e.target.value)}
+                    placeholder="e.g. NS-XXXXXXXX"
+                    className="h-12 bg-black/20 border-white/10 focus-visible:ring-teal-500 font-mono"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Order ID (Optional)</label>
-                  <Input placeholder="e.g. NST-XXXXXXXX" className="bg-black/20 border-white/10 focus-visible:ring-teal-500" />
+                  <label className="text-sm font-medium text-muted-foreground">Phone Number</label>
+                  <Input
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    placeholder="e.g. 024XXXXXXX"
+                    className="h-12 bg-black/20 border-white/10 focus-visible:ring-teal-500"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Message</label>
-                  <Textarea required placeholder="How can we help?" className="min-h-[120px] bg-black/20 border-white/10 focus-visible:ring-teal-500" />
+                  <label className="text-sm font-medium text-muted-foreground">Describe your issue</label>
+                  <Textarea
+                    value={message}
+                    onChange={e => setMessage(e.target.value)}
+                    placeholder="Tell us what happened with your order..."
+                    className="min-h-[130px] bg-black/20 border-white/10 focus-visible:ring-teal-500 resize-none"
+                  />
                 </div>
-                <Button type="submit" className="w-full h-12 bg-white text-black hover:bg-gray-200" disabled={isSubmitting}>
-                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send Message'}
+                <Button type="submit" className="w-full h-12 bg-gradient-to-r from-teal-500 to-purple-600 text-white font-semibold border-none" disabled={isSubmitting}>
+                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+                  {isSubmitting ? "Submitting..." : "Submit Complaint"}
                 </Button>
               </form>
             )}
