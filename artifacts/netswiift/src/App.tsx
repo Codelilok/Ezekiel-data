@@ -13,6 +13,7 @@ import Profile from "@/pages/Profile";
 import BulkOrders from "@/pages/BulkOrders";
 import Admin from "@/pages/Admin";
 import Agent from "@/pages/Agent";
+import Blocked from "@/pages/Blocked";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/bulk-orders" component={BulkOrders} />
       <Route path="/admin" component={Admin} />
       <Route path="/agent" component={Agent} />
+      <Route path="/blocked" component={Blocked} />
       <Route component={NotFound} />
     </Switch>
   );
