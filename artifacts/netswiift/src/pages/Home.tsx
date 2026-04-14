@@ -136,6 +136,12 @@ function HeroAuthSection() {
     setTimeout(() => {
       setSignupLoading(false);
       saveUser(signupName, signupEmail);
+      const users: any[] = (() => { try { return JSON.parse(localStorage.getItem("nsUsers") ?? "[]"); } catch { return []; } })();
+      const alreadyExists = users.some((u: any) => u.email === signupEmail);
+      if (!alreadyExists) {
+        const newUser = { id: `u_${Date.now()}`, name: signupName, email: signupEmail, role: "user", status: "active", joinedAt: new Date().toISOString() };
+        localStorage.setItem("nsUsers", JSON.stringify([...users, newUser]));
+      }
       toast.success("Account created! Welcome to NetSwift");
       setLocation("/dashboard");
     }, 1000);
@@ -451,8 +457,7 @@ function BuyDataSection() {
                         onClick={() => { setBundle(b.id); setTimeout(() => setStep(4), 300); }}
                         className={`p-4 rounded-2xl border-2 text-left transition-all ${bundle === b.id ? 'border-teal-500/50 bg-teal-500/10' : 'border-white/5 bg-black/20 hover:border-white/20'}`}
                       >
-                        <div className="text-2xl font-bold text-white mb-1">{b.size}</div>
-                        <div className="text-sm text-muted-foreground mb-4">{b.validity}</div>
+                        <div className="text-2xl font-bold text-white mb-3">{b.size}</div>
                         <div className="text-lg font-semibold text-teal-400">{b.price}</div>
                       </button>
                     ))}

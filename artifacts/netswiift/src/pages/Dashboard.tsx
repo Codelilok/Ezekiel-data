@@ -268,7 +268,7 @@ export default function Dashboard() {
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
             <div>
-              <p className="text-sm text-muted-foreground mb-0.5">Good day,</p>
+              <p className="text-sm text-muted-foreground mb-0.5">{(() => { const h = new Date().getHours(); return h < 12 ? "Good morning," : h < 17 ? "Good afternoon," : "Good evening,"; })()}</p>
               <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">{firstName}</h2>
             </div>
           </motion.div>

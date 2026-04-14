@@ -602,7 +602,7 @@ export default function Admin() {
 
   function handleLogout() {
     localStorage.removeItem("nsAdmin");
-    setLoggedIn(false);
+    setLocation("/");
   }
 
   if (!loggedIn) return <LoginScreen onLogin={() => setLoggedIn(true)} />;
