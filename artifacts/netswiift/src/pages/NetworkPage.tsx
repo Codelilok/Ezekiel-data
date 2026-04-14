@@ -188,7 +188,7 @@ export default function NetworkPage({
                       <p className="text-3xl font-extrabold text-white tracking-tight leading-none mb-1">
                         {b.size}
                       </p>
-                      <p className="text-xs text-muted-foreground mb-3">{b.validity}</p>
+                      {b.validity !== "2 days" && <p className="text-xs text-muted-foreground mb-3">{b.validity}</p>}
                       <p className={`text-base font-bold ${t.text}`}>{b.price}</p>
 
                       {bundle === b.id && (
@@ -308,7 +308,7 @@ export default function NetworkPage({
                       <Zap className="w-6 h-6 text-white fill-current" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-white text-base">Haystack</p>
+                      <p className="font-bold text-white text-base">Paystack</p>
                       <p className="text-xs text-muted-foreground">Instant mobile money payment</p>
                     </div>
                     <div className="w-5 h-5 rounded-full border-2 border-teal-500 bg-teal-500 flex items-center justify-center shrink-0">
