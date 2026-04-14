@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Package, Activity, MessageSquare, Check, ChevronDown, ChevronUp, Loader2, X, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { useListOrders } from "@workspace/api-client-react";
+import { getLocalOrders } from "@/lib/dummyData";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -286,9 +287,13 @@ function OrderCard({ order, index }: { order: any; index: number }) {
 
 export default function OrdersPage() {
   const [filter, setFilter] = useState<string>("all");
-  const { data: orders, isLoading } = useListOrders({
+  const { data: apiOrders, isLoading } = useListOrders({
     status: filter !== "all" ? filter.charAt(0).toUpperCase() + filter.slice(1) : undefined,
   });
+
+  const allLocal = getLocalOrders();
+  const filteredLocal = filter === "all" ? allLocal : allLocal.filter(o => o.status.toLowerCase() === filter);
+  const orders = (!isLoading && (!apiOrders || apiOrders.length === 0)) ? filteredLocal : apiOrders;
 
   return (
     <div className="min-h-screen bg-background">

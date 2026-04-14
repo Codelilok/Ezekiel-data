@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGetDashboardStats, useListOrders, useListTransactions } from "@workspace/api-client-react";
+import { getLocalOrders } from "@/lib/dummyData";
 import { format } from "date-fns";
 import {
   Home, Package, CreditCard,
@@ -169,9 +170,21 @@ export default function Dashboard() {
   const firstName = user.name.split(" ")[0];
   const initials = user.name.split(" ").map((p: string) => p[0]).join("").slice(0, 2).toUpperCase();
 
+  useEffect(() => {
+    try {
+      const allUsers: any[] = JSON.parse(localStorage.getItem("nsUsers") ?? "[]");
+      const record = allUsers.find((u: any) => u.email === user.email);
+      if (record?.role === "agent") setLocation("/agent");
+    } catch {}
+  }, [user.email]);
+
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats({ query: { refetchInterval: 30000, staleTime: 10000 } } as any);
-  const { data: recentOrders, isLoading: ordersLoading } = useListOrders({ limit: 6 }, { query: { refetchInterval: 30000, staleTime: 10000 } } as any);
+  const { data: apiOrders, isLoading: ordersLoading } = useListOrders({ limit: 6 }, { query: { refetchInterval: 30000, staleTime: 10000 } } as any);
   const { data: recentTx } = useListTransactions({ limit: 4 }, { query: { refetchInterval: 30000, staleTime: 10000 } } as any);
+
+  const recentOrders = (!ordersLoading && (!apiOrders || apiOrders.length === 0))
+    ? getLocalOrders().slice(0, 6)
+    : apiOrders;
 
   function handleLogout() {
     localStorage.removeItem("nsUser");

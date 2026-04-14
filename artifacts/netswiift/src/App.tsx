@@ -14,6 +14,9 @@ import BulkOrders from "@/pages/BulkOrders";
 import Admin from "@/pages/Admin";
 import Agent from "@/pages/Agent";
 import Blocked from "@/pages/Blocked";
+import { seedDummyData } from "@/lib/dummyData";
+
+seedDummyData();
 
 const queryClient = new QueryClient();
 

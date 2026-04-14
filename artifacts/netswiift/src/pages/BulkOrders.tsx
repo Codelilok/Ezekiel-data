@@ -104,7 +104,7 @@ export default function BulkOrders() {
                 <CardContent className="p-4 space-y-2">
                   <p className="text-sm font-semibold text-white">How it works</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Enter one entry per line: <span className="font-mono text-teal-400">phone space GB</span> — Valid GB: <span className="text-white font-mono">{VALID_SIZES.join(", ")}</span>
+                    Enter one entry per line: <span className="font-mono text-teal-400">phone space GB</span>
                   </p>
                   <div className="mt-2 bg-black/30 rounded-lg p-3 font-mono text-xs text-muted-foreground space-y-0.5 border border-white/5">
                     <p>0557654101 1</p><p>0244123456 5</p><p>0201234567 10</p>

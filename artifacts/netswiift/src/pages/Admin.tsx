@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { useListOrders } from "@workspace/api-client-react";
+import { getLocalOrders } from "@/lib/dummyData";
 
 const ADMIN_EMAIL    = "codelilok@gmail.com";
 const ADMIN_PASSWORD = "NetSwift@26";
@@ -436,7 +437,8 @@ function RemovedTab() {
 }
 
 function OrdersTab() {
-  const { data: orders, isLoading, refetch } = useListOrders({});
+  const { data: apiOrders, isLoading, refetch } = useListOrders({});
+  const orders = (!isLoading && (!apiOrders || apiOrders.length === 0)) ? getLocalOrders() : apiOrders;
 
   const statusCls = (s: string) => {
     switch (s.toLowerCase()) {
