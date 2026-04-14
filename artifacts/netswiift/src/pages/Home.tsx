@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Check, AlertCircle, ChevronRight, Loader2, ArrowRight, Menu } from "lucide-react";
+import { Zap, Check, AlertCircle, Loader2, ArrowRight, Eye, EyeOff, Mail, Send } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
-import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
 import { useTrackOrder, getTrackOrderQueryKey, useCreateOrder } from "@workspace/api-client-react";
 import { format } from "date-fns";
+import { useLocation } from "wouter";
 
 // Smooth scrolling utility
 const scrollTo = (id: string) => {
@@ -32,35 +32,113 @@ function Navbar() {
             NetSwift
           </span>
         </div>
-        <div className="hidden md:flex gap-6 text-sm font-medium text-muted-foreground">
+        <div className="flex gap-4 sm:gap-6 text-sm font-medium text-muted-foreground">
           <button onClick={() => scrollTo('hero')} className="hover:text-foreground transition-colors">Home</button>
           <button onClick={() => scrollTo('buy')} className="hover:text-foreground transition-colors">Buy Data</button>
-          <button onClick={() => scrollTo('track')} className="hover:text-foreground transition-colors">Track Order</button>
-          <button onClick={() => scrollTo('support')} className="hover:text-foreground transition-colors">Support</button>
+          <button onClick={() => scrollTo('track')} className="hover:text-foreground transition-colors hidden sm:inline">Track Order</button>
+          <button onClick={() => scrollTo('support')} className="hover:text-foreground transition-colors hidden sm:inline">Support</button>
         </div>
-        
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="md:hidden border-white/10 bg-white/5">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="bg-background/95 backdrop-blur-xl border-l border-white/10">
-            <SheetHeader className="sr-only"><SheetTitle>Menu</SheetTitle></SheetHeader>
-            <div className="flex flex-col gap-6 mt-8 text-lg font-medium">
-              <button onClick={() => scrollTo('hero')} className="hover:text-teal-400 transition-colors text-left">Home</button>
-              <button onClick={() => scrollTo('buy')} className="hover:text-teal-400 transition-colors text-left">Buy Data</button>
-              <button onClick={() => scrollTo('track')} className="hover:text-teal-400 transition-colors text-left">Track Order</button>
-              <button onClick={() => scrollTo('support')} className="hover:text-teal-400 transition-colors text-left">Support</button>
-            </div>
-          </SheetContent>
-        </Sheet>
       </div>
     </nav>
   );
 }
 
+function PasswordInput({ placeholder, value, onChange }: { placeholder: string; value: string; onChange: (v: string) => void }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <Input
+        placeholder={placeholder}
+        type={show ? "text" : "password"}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="h-12 bg-black/20 border-white/10 focus-visible:ring-teal-500 pr-12"
+      />
+      <button
+        type="button"
+        onClick={() => setShow(s => !s)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+        tabIndex={-1}
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+}
+
+function Divider({ label }: { label: string }) {
+  return (
+    <div className="relative">
+      <div className="absolute inset-0 flex items-center">
+        <span className="w-full border-t border-white/10" />
+      </div>
+      <div className="relative flex justify-center text-xs uppercase">
+        <span className="bg-card px-2 text-muted-foreground">{label}</span>
+      </div>
+    </div>
+  );
+}
+
 function HeroAuthSection() {
+  const [, setLocation] = useLocation();
+
+  // Login state
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  // Signup state
+  const [signupName, setSignupName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupLoading, setSignupLoading] = useState(false);
+
+  // Forgot password state
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [magicSent, setMagicSent] = useState(false);
+
+  function handleGoogleAuth() {
+    toast.success("Signed in with Google");
+    setTimeout(() => setLocation("/dashboard"), 600);
+  }
+
+  function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!loginEmail) { toast.error("Please enter your email"); return; }
+    if (!loginPassword) { toast.error("Please enter your password"); return; }
+    setLoginLoading(true);
+    setTimeout(() => {
+      setLoginLoading(false);
+      toast.success("Logged in successfully");
+      setLocation("/dashboard");
+    }, 1000);
+  }
+
+  function handleSignup(e: React.FormEvent) {
+    e.preventDefault();
+    if (!signupName) { toast.error("Please enter your name"); return; }
+    if (!signupEmail) { toast.error("Please enter your email"); return; }
+    if (signupPassword.length < 6) { toast.error("Password must be at least 6 characters"); return; }
+    setSignupLoading(true);
+    setTimeout(() => {
+      setSignupLoading(false);
+      toast.success("Account created! Welcome to NetSwift");
+      setLocation("/dashboard");
+    }, 1000);
+  }
+
+  function handleMagicLink(e: React.FormEvent) {
+    e.preventDefault();
+    if (!forgotEmail) { toast.error("Please enter your email"); return; }
+    setForgotLoading(true);
+    setTimeout(() => {
+      setForgotLoading(false);
+      setMagicSent(true);
+    }, 1200);
+  }
+
   return (
     <section id="hero" className="container mx-auto px-4 py-20 lg:py-32 flex flex-col lg:flex-row items-center gap-12 lg:gap-24 relative">
       <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-teal-500/20 rounded-full blur-[128px] pointer-events-none" />
@@ -90,62 +168,127 @@ function HeroAuthSection() {
       </div>
 
       <div className="w-full max-w-md z-10">
-        <Card className="border-white/10 bg-background/40 backdrop-blur-2xl shadow-2xl shadow-black/50">
-          <CardHeader>
+        <Card className="border-white/10 bg-card/60 backdrop-blur-2xl shadow-2xl shadow-black/50">
+          <CardHeader className="pb-2">
             <CardTitle>Welcome to NetSwift</CardTitle>
             <CardDescription>Log in or sign up to save your payment methods.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6 bg-white/5 border border-white/10">
-                <TabsTrigger value="login" className="data-[state=active]:bg-white/10">Login</TabsTrigger>
-                <TabsTrigger value="signup" className="data-[state=active]:bg-white/10">Sign Up</TabsTrigger>
-              </TabsList>
-              <TabsContent value="login" className="space-y-4">
-                <Button variant="outline" className="w-full border-white/10 bg-white/5 hover:bg-white/10 h-12">
-                  <SiGoogle className="mr-2 h-5 w-5 text-red-400" />
-                  Continue with Google
-                </Button>
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-white/10" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <Input placeholder="Email address" type="email" className="h-12 bg-black/20 border-white/10 focus-visible:ring-teal-500" />
-                  <Input placeholder="Password" type="password" className="h-12 bg-black/20 border-white/10 focus-visible:ring-teal-500" />
-                  <Button className="w-full h-12 bg-white text-black hover:bg-gray-200">
-                    Login
-                  </Button>
-                </div>
-              </TabsContent>
-              <TabsContent value="signup" className="space-y-4">
-                <Button variant="outline" className="w-full border-white/10 bg-white/5 hover:bg-white/10 h-12">
-                  <SiGoogle className="mr-2 h-5 w-5 text-red-400" />
-                  Continue with Google
-                </Button>
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-white/10" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">Or sign up with email</span>
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <Input placeholder="Full Name" className="h-12 bg-black/20 border-white/10 focus-visible:ring-teal-500" />
-                  <Input placeholder="Email address" type="email" className="h-12 bg-black/20 border-white/10 focus-visible:ring-teal-500" />
-                  <Input placeholder="Create Password" type="password" className="h-12 bg-black/20 border-white/10 focus-visible:ring-teal-500" />
-                  <Button className="w-full h-12 bg-white text-black hover:bg-gray-200">
-                    Create Account
-                  </Button>
-                </div>
-              </TabsContent>
-            </Tabs>
-            <p className="text-xs text-center text-muted-foreground mt-6">
+            <AnimatePresence mode="wait">
+              {showForgot ? (
+                <motion.div key="forgot" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="space-y-4">
+                  {magicSent ? (
+                    <div className="py-6 text-center space-y-3">
+                      <div className="w-14 h-14 rounded-full bg-teal-500/20 flex items-center justify-center mx-auto">
+                        <Mail className="w-7 h-7 text-teal-400" />
+                      </div>
+                      <p className="font-semibold text-white">Check your inbox</p>
+                      <p className="text-sm text-muted-foreground">A magic login link was sent to <span className="text-teal-400">{forgotEmail}</span>. Click it to sign in instantly.</p>
+                      <Button variant="ghost" className="text-muted-foreground text-sm" onClick={() => { setShowForgot(false); setMagicSent(false); setForgotEmail(""); }}>
+                        Back to login
+                      </Button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleMagicLink} className="space-y-4">
+                      <div>
+                        <p className="text-sm text-white font-medium mb-1">Forgot your password?</p>
+                        <p className="text-xs text-muted-foreground mb-4">Enter your email and we'll send you a magic link to sign in instantly — no password needed.</p>
+                      </div>
+                      <Input
+                        placeholder="Email address"
+                        type="email"
+                        value={forgotEmail}
+                        onChange={e => setForgotEmail(e.target.value)}
+                        className="h-12 bg-black/20 border-white/10 focus-visible:ring-teal-500"
+                      />
+                      <Button type="submit" className="w-full h-12 bg-gradient-to-r from-teal-500 to-purple-600 text-white font-semibold border-none" disabled={forgotLoading}>
+                        {forgotLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                        {forgotLoading ? "Sending..." : "Send Magic Link"}
+                      </Button>
+                      <Button type="button" variant="ghost" className="w-full text-muted-foreground text-sm" onClick={() => setShowForgot(false)}>
+                        Back to login
+                      </Button>
+                    </form>
+                  )}
+                </motion.div>
+              ) : (
+                <motion.div key="auth" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                  <Tabs defaultValue="login" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-5 bg-white/5 border border-white/10">
+                      <TabsTrigger value="login" className="data-[state=active]:bg-white/10">Login</TabsTrigger>
+                      <TabsTrigger value="signup" className="data-[state=active]:bg-white/10">Sign Up</TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="login" className="space-y-4 mt-0">
+                      <Button type="button" variant="outline" onClick={handleGoogleAuth} className="w-full border-white/10 bg-white/5 hover:bg-white/10 h-12">
+                        <SiGoogle className="mr-2 h-4 w-4 text-red-400" />
+                        Continue with Google
+                      </Button>
+                      <Divider label="Or continue with" />
+                      <form onSubmit={handleLogin} className="space-y-3">
+                        <Input
+                          placeholder="Email address"
+                          type="email"
+                          value={loginEmail}
+                          onChange={e => setLoginEmail(e.target.value)}
+                          className="h-12 bg-black/20 border-white/10 focus-visible:ring-teal-500"
+                        />
+                        <PasswordInput placeholder="Password" value={loginPassword} onChange={setLoginPassword} />
+                        <div className="flex justify-between items-center pt-0.5">
+                          <button
+                            type="button"
+                            onClick={() => setShowForgot(true)}
+                            className="text-xs text-teal-400 hover:text-teal-300 transition-colors"
+                          >
+                            Forgot password?
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setForgotEmail(loginEmail); setShowForgot(true); }}
+                            className="text-xs text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1"
+                          >
+                            <Send className="w-3 h-3" /> Magic link
+                          </button>
+                        </div>
+                        <Button type="submit" className="w-full h-12 bg-gradient-to-r from-teal-500 to-purple-600 text-white font-semibold border-none" disabled={loginLoading}>
+                          {loginLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          {loginLoading ? "Logging in..." : "Login"}
+                        </Button>
+                      </form>
+                    </TabsContent>
+
+                    <TabsContent value="signup" className="space-y-4 mt-0">
+                      <Button type="button" variant="outline" onClick={handleGoogleAuth} className="w-full border-white/10 bg-white/5 hover:bg-white/10 h-12">
+                        <SiGoogle className="mr-2 h-4 w-4 text-red-400" />
+                        Continue with Google
+                      </Button>
+                      <Divider label="Or sign up with email" />
+                      <form onSubmit={handleSignup} className="space-y-3">
+                        <Input
+                          placeholder="Full Name"
+                          value={signupName}
+                          onChange={e => setSignupName(e.target.value)}
+                          className="h-12 bg-black/20 border-white/10 focus-visible:ring-teal-500"
+                        />
+                        <Input
+                          placeholder="Email address"
+                          type="email"
+                          value={signupEmail}
+                          onChange={e => setSignupEmail(e.target.value)}
+                          className="h-12 bg-black/20 border-white/10 focus-visible:ring-teal-500"
+                        />
+                        <PasswordInput placeholder="Create Password (min. 6 chars)" value={signupPassword} onChange={setSignupPassword} />
+                        <Button type="submit" className="w-full h-12 bg-gradient-to-r from-teal-500 to-purple-600 text-white font-semibold border-none mt-1" disabled={signupLoading}>
+                          {signupLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          {signupLoading ? "Creating account..." : "Create Account"}
+                        </Button>
+                      </form>
+                    </TabsContent>
+                  </Tabs>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <p className="text-xs text-center text-muted-foreground mt-5 border-t border-white/5 pt-4">
               Auth is optional — you can buy data without an account
             </p>
           </CardContent>
