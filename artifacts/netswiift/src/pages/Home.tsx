@@ -32,10 +32,6 @@ function Navbar() {
             NetSwift
           </span>
         </div>
-        <div className="flex gap-4 sm:gap-6 text-sm font-medium text-muted-foreground">
-          <button onClick={() => scrollTo('track')} className="hover:text-foreground transition-colors">Track Order</button>
-          <button onClick={() => scrollTo('buy')} className="hover:text-foreground transition-colors">Buy Data</button>
-        </div>
       </div>
     </nav>
   );
@@ -166,9 +162,6 @@ function HeroAuthSection() {
           <Button size="lg" className="h-14 px-8 text-base bg-gradient-to-r from-teal-500 to-teal-400 hover:from-teal-400 hover:to-teal-300 text-teal-950 font-bold border-none shadow-[0_0_40px_-10px_rgba(20,184,166,0.5)] transition-all hover:scale-105" onClick={() => scrollTo('buy')}>
             Buy Data Now
             <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
-          <Button size="lg" variant="outline" className="h-14 px-8 text-base border-white/10 bg-white/5 hover:bg-white/10" onClick={() => scrollTo('track')}>
-            Track Order
           </Button>
         </div>
       </div>

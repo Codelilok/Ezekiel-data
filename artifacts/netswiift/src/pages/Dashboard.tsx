@@ -70,17 +70,20 @@ export default function Dashboard() {
       </div>
 
       <div className="px-4 py-4 border-b border-white/5">
-        <div className="flex items-center gap-3 px-3 py-2">
-          <Avatar className="h-9 w-9 border border-teal-500/30">
-            <AvatarFallback className="bg-gradient-to-br from-teal-500/20 to-purple-600/20 text-teal-400 text-sm font-bold">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <p className="font-semibold text-sm text-white truncate">{user.name}</p>
-            <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+        <Link href="/profile">
+          <div className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/5 cursor-pointer transition-colors">
+            <Avatar className="h-9 w-9 border border-teal-500/30">
+              <AvatarFallback className="bg-gradient-to-br from-teal-500/20 to-purple-600/20 text-teal-400 text-sm font-bold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-sm text-white truncate">{user.name}</p>
+              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
           </div>
-        </div>
+        </Link>
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
@@ -156,7 +159,7 @@ export default function Dashboard() {
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-white h-9 w-9">
                 <Bell className="w-4 h-4" />
               </Button>
-              <Avatar className="h-8 w-8 border border-teal-500/30 cursor-pointer">
+              <Avatar className="h-8 w-8 border border-teal-500/30 cursor-pointer hover:border-teal-400 transition-colors" onClick={() => setLocation("/profile")}>
                 <AvatarFallback className="bg-gradient-to-br from-teal-500/20 to-purple-600/20 text-teal-400 text-xs font-bold">
                   {initials}
                 </AvatarFallback>

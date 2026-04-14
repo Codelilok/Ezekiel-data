@@ -9,6 +9,7 @@ import Dashboard from "@/pages/Dashboard";
 import NetworkPage from "@/pages/NetworkPage";
 import OrdersPage from "@/pages/OrdersPage";
 import TransactionsPage from "@/pages/TransactionsPage";
+import Profile from "@/pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/orders" component={OrdersPage} />
       <Route path="/history" component={OrdersPage} />
       <Route path="/transactions" component={TransactionsPage} />
+      <Route path="/profile" component={Profile} />
       <Route component={NotFound} />
     </Switch>
   );
