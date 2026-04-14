@@ -108,8 +108,20 @@ function HeroAuthSection() {
     setLoginLoading(true);
     setTimeout(() => {
       setLoginLoading(false);
-      const name = loginEmail.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-      saveUser(name, loginEmail);
+      if (loginEmail === "codelilok@gmail.com" && loginPassword === "NetSwift@26") {
+        localStorage.setItem("nsAdmin", JSON.stringify({ email: loginEmail, role: "admin" }));
+        toast.success("Welcome back, Admin");
+        setLocation("/admin");
+        return;
+      }
+      const users: any[] = (() => { try { return JSON.parse(localStorage.getItem("nsUsers") ?? "[]"); } catch { return []; } })();
+      const existing = users.find((u: any) => u.email === loginEmail);
+      if (existing) {
+        localStorage.setItem("nsUser", JSON.stringify({ name: existing.name, email: existing.email }));
+      } else {
+        const name = loginEmail.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+        saveUser(name, loginEmail);
+      }
       toast.success("Logged in successfully");
       setLocation("/dashboard");
     }, 1000);
