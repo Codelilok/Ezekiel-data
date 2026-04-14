@@ -4,6 +4,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
+import Dashboard from "@/pages/Dashboard";
+import NetworkPage from "@/pages/NetworkPage";
+import OrdersPage from "@/pages/OrdersPage";
+import TransactionsPage from "@/pages/TransactionsPage";
 
 const queryClient = new QueryClient();
 
@@ -11,6 +15,13 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/mtn"><NetworkPage network="mtn" name="MTN" colorTheme="yellow" /></Route>
+      <Route path="/telecel"><NetworkPage network="telecel" name="Telecel" colorTheme="red" /></Route>
+      <Route path="/airteltigo"><NetworkPage network="airteltigo" name="AirtelTigo" colorTheme="blue" /></Route>
+      <Route path="/orders" component={OrdersPage} />
+      <Route path="/history" component={OrdersPage} />
+      <Route path="/transactions" component={TransactionsPage} />
       <Route component={NotFound} />
     </Switch>
   );

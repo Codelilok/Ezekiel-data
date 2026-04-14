@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
-}
+export type TrackOrderParams = {
+  /**
+   * Order ID (e.g. NSW-XXXXXXXX) or phone number
+   */
+  q: string;
+};

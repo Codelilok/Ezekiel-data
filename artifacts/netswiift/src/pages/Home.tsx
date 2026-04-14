@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap, Check, AlertCircle, ChevronRight, Loader2, ArrowRight } from "lucide-react";
+import { Zap, Check, AlertCircle, ChevronRight, Loader2, ArrowRight, Menu } from "lucide-react";
 import { SiGoogle } from "react-icons/si";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
+import { useTrackOrder, getTrackOrderQueryKey, useCreateOrder } from "@workspace/api-client-react";
+import { format } from "date-fns";
 
 // Smooth scrolling utility
 const scrollTo = (id: string) => {
@@ -26,7 +29,7 @@ function Navbar() {
             <Zap className="h-5 w-5 fill-current" />
           </div>
           <span className="bg-gradient-to-r from-teal-400 to-purple-500 bg-clip-text text-transparent tracking-tight">
-            NetSwiift
+            NetSwift
           </span>
         </div>
         <div className="hidden md:flex gap-6 text-sm font-medium text-muted-foreground">
@@ -35,9 +38,23 @@ function Navbar() {
           <button onClick={() => scrollTo('track')} className="hover:text-foreground transition-colors">Track Order</button>
           <button onClick={() => scrollTo('support')} className="hover:text-foreground transition-colors">Support</button>
         </div>
-        <Button variant="outline" className="md:hidden border-white/10 bg-white/5">
-          Menu
-        </Button>
+        
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon" className="md:hidden border-white/10 bg-white/5">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="bg-background/95 backdrop-blur-xl border-l border-white/10">
+            <SheetHeader className="sr-only"><SheetTitle>Menu</SheetTitle></SheetHeader>
+            <div className="flex flex-col gap-6 mt-8 text-lg font-medium">
+              <button onClick={() => scrollTo('hero')} className="hover:text-teal-400 transition-colors text-left">Home</button>
+              <button onClick={() => scrollTo('buy')} className="hover:text-teal-400 transition-colors text-left">Buy Data</button>
+              <button onClick={() => scrollTo('track')} className="hover:text-teal-400 transition-colors text-left">Track Order</button>
+              <button onClick={() => scrollTo('support')} className="hover:text-teal-400 transition-colors text-left">Support</button>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </nav>
   );
@@ -46,7 +63,6 @@ function Navbar() {
 function HeroAuthSection() {
   return (
     <section id="hero" className="container mx-auto px-4 py-20 lg:py-32 flex flex-col lg:flex-row items-center gap-12 lg:gap-24 relative">
-      {/* Background ambient glow */}
       <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-teal-500/20 rounded-full blur-[128px] pointer-events-none" />
       <div className="absolute top-1/2 right-1/4 translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-600/20 rounded-full blur-[128px] pointer-events-none" />
 
@@ -76,7 +92,7 @@ function HeroAuthSection() {
       <div className="w-full max-w-md z-10">
         <Card className="border-white/10 bg-background/40 backdrop-blur-2xl shadow-2xl shadow-black/50">
           <CardHeader>
-            <CardTitle>Welcome to NetSwiift</CardTitle>
+            <CardTitle>Welcome to NetSwift</CardTitle>
             <CardDescription>Log in or sign up to save your payment methods.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -146,11 +162,11 @@ const NETWORKS = [
 ];
 
 const BUNDLES = [
-  { id: '1gb', size: '1GB', validity: '2 days', price: 'GHS 5' },
-  { id: '2gb', size: '2GB', validity: '7 days', price: 'GHS 10' },
-  { id: '5gb', size: '5GB', validity: '30 days', price: 'GHS 25' },
-  { id: '10gb', size: '10GB', validity: '30 days', price: 'GHS 45' },
-  { id: '20gb', size: '20GB', validity: '30 days', price: 'GHS 80' },
+  { id: '1gb', size: '1GB', validity: '2 days', price: 'GHS 5', priceValue: 5, gbAmount: 1 },
+  { id: '2gb', size: '2GB', validity: '7 days', price: 'GHS 10', priceValue: 10, gbAmount: 2 },
+  { id: '5gb', size: '5GB', validity: '30 days', price: 'GHS 25', priceValue: 25, gbAmount: 5 },
+  { id: '10gb', size: '10GB', validity: '30 days', price: 'GHS 45', priceValue: 45, gbAmount: 10 },
+  { id: '20gb', size: '20GB', validity: '30 days', price: 'GHS 80', priceValue: 80, gbAmount: 20 },
 ];
 
 function BuyDataSection() {
@@ -158,8 +174,9 @@ function BuyDataSection() {
   const [network, setNetwork] = useState("");
   const [phone, setPhone] = useState("");
   const [bundle, setBundle] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
   const [orderId, setOrderId] = useState("");
+  
+  const createOrderMutation = useCreateOrder();
 
   const handleNext = () => {
     if (step === 1 && !network) return toast.error("Please select a network");
@@ -169,12 +186,29 @@ function BuyDataSection() {
   };
 
   const handlePayment = () => {
-    setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      setOrderId("NST-" + Math.random().toString(36).substring(2, 10).toUpperCase());
-      setStep(5);
-    }, 2000);
+    const selectedNetwork = NETWORKS.find(n => n.id === network);
+    const selectedBundle = BUNDLES.find(b => b.id === bundle);
+    
+    if (!selectedNetwork || !selectedBundle) return;
+    
+    createOrderMutation.mutate({
+      data: {
+        network: selectedNetwork.name,
+        bundleSize: selectedBundle.size,
+        bundleValidity: selectedBundle.validity,
+        phone,
+        gbAmount: selectedBundle.gbAmount,
+        price: selectedBundle.priceValue
+      }
+    }, {
+      onSuccess: (data) => {
+        setOrderId(data.orderId);
+        setStep(5);
+      },
+      onError: () => {
+        toast.error("Failed to process order");
+      }
+    });
   };
 
   const resetFlow = () => {
@@ -194,7 +228,6 @@ function BuyDataSection() {
         </div>
 
         <Card className="border-white/10 bg-background/60 backdrop-blur-xl shadow-2xl relative overflow-hidden">
-          {/* Progress bar */}
           <div className="absolute top-0 left-0 h-1 bg-white/5 w-full">
             <motion.div 
               className="h-full bg-gradient-to-r from-teal-500 to-purple-500"
@@ -300,13 +333,13 @@ function BuyDataSection() {
                     </div>
                   </div>
                   <div className="flex gap-4">
-                    <Button variant="ghost" onClick={() => setStep(3)} className="flex-1 h-14" disabled={isProcessing}>Back</Button>
+                    <Button variant="ghost" onClick={() => setStep(3)} className="flex-1 h-14" disabled={createOrderMutation.isPending}>Back</Button>
                     <Button 
                       onClick={handlePayment} 
                       className="flex-[2] h-14 bg-gradient-to-r from-teal-500 to-purple-600 text-white font-bold border-none"
-                      disabled={isProcessing}
+                      disabled={createOrderMutation.isPending}
                     >
-                      {isProcessing ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Proceed to Payment'}
+                      {createOrderMutation.isPending ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Proceed to Payment'}
                     </Button>
                   </div>
                 </motion.div>
@@ -345,26 +378,23 @@ function BuyDataSection() {
 }
 
 function TrackOrderSection() {
-  const [query, setQuery] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [queryInput, setQueryInput] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
+
+  const { data: result, isLoading: isSearching, error } = useTrackOrder(
+    { q: submittedQuery },
+    { 
+      query: { 
+        enabled: !!submittedQuery, 
+        queryKey: getTrackOrderQueryKey({ q: submittedQuery }),
+        retry: false
+      } 
+    }
+  );
 
   const handleTrack = () => {
-    if (!query) return;
-    setIsSearching(true);
-    setResult(null);
-    
-    setTimeout(() => {
-      setIsSearching(false);
-      setResult({
-        id: query,
-        status: "Completed",
-        network: "MTN",
-        bundle: "5GB",
-        time: new Date().toLocaleTimeString(),
-        date: new Date().toLocaleDateString()
-      });
-    }, 1500);
+    if (!queryInput) return;
+    setSubmittedQuery(queryInput);
   };
 
   return (
@@ -377,8 +407,8 @@ function TrackOrderSection() {
 
         <div className="flex gap-2 mb-8">
           <Input 
-            value={query} 
-            onChange={e => setQuery(e.target.value)} 
+            value={queryInput} 
+            onChange={e => setQueryInput(e.target.value)} 
             placeholder="Order ID or Phone Number" 
             className="h-14 text-lg bg-background border-white/10 focus-visible:ring-teal-500"
           />
@@ -396,6 +426,20 @@ function TrackOrderSection() {
           </Card>
         )}
 
+        {error && !isSearching && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <Card className="border-red-500/30 bg-red-500/5 relative overflow-hidden">
+              <CardContent className="p-8 flex items-center gap-4 text-red-400">
+                <AlertCircle className="h-8 w-8 shrink-0" />
+                <div>
+                  <h4 className="font-semibold mb-1">Order Not Found</h4>
+                  <p className="text-sm opacity-90">No order found matching this ID or phone number. Please check and try again.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
         {result && !isSearching && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Card className="border-teal-500/30 bg-teal-500/5 relative overflow-hidden">
@@ -408,7 +452,7 @@ function TrackOrderSection() {
                 <div className="grid grid-cols-2 gap-y-6">
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Order ID</div>
-                    <div className="font-mono text-white">{result.id}</div>
+                    <div className="font-mono text-white">{result.orderId}</div>
                   </div>
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Network</div>
@@ -416,11 +460,11 @@ function TrackOrderSection() {
                   </div>
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Bundle</div>
-                    <div className="font-medium text-white">{result.bundle}</div>
+                    <div className="font-medium text-white">{result.bundleSize}</div>
                   </div>
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">Time</div>
-                    <div className="font-medium text-white">{result.time} - {result.date}</div>
+                    <div className="font-medium text-white">{format(new Date(result.createdAt), 'MMM d, yyyy HH:mm')}</div>
                   </div>
                 </div>
               </CardContent>
@@ -469,17 +513,26 @@ function SupportSection() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-white">Phone Number or Order ID</label>
-                  <Input required placeholder="Enter reference..." className="bg-black/20 border-white/10" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Name</label>
+                    <Input required className="bg-black/20 border-white/10 focus-visible:ring-teal-500" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Email</label>
+                    <Input type="email" required className="bg-black/20 border-white/10 focus-visible:ring-teal-500" />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-white">Message</label>
-                  <Textarea required placeholder="Describe your issue in detail..." className="min-h-[120px] bg-black/20 border-white/10" />
+                  <label className="text-sm font-medium">Order ID (Optional)</label>
+                  <Input placeholder="e.g. NST-XXXXXXXX" className="bg-black/20 border-white/10 focus-visible:ring-teal-500" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Message</label>
+                  <Textarea required placeholder="How can we help?" className="min-h-[120px] bg-black/20 border-white/10 focus-visible:ring-teal-500" />
                 </div>
                 <Button type="submit" className="w-full h-12 bg-white text-black hover:bg-gray-200" disabled={isSubmitting}>
-                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
-                  {isSubmitting ? 'Submitting...' : 'Submit Request'}
+                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send Message'}
                 </Button>
               </form>
             )}
@@ -492,15 +545,19 @@ function SupportSection() {
 
 function Footer() {
   return (
-    <footer className="border-t border-white/10 bg-black/40 py-12">
+    <footer className="border-t border-white/5 bg-background py-12">
       <div className="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
-        <div className="flex items-center gap-2 font-bold text-lg opacity-50">
-          <Zap className="h-4 w-4" />
-          <span>NetSwiift</span>
+        <div className="flex items-center gap-2 font-bold text-xl">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-teal-500 to-purple-600 text-white">
+            <Zap className="h-5 w-5 fill-current" />
+          </div>
+          <span className="bg-gradient-to-r from-teal-400 to-purple-500 bg-clip-text text-transparent">
+            NetSwift
+          </span>
         </div>
-        <p className="text-sm text-muted-foreground">
-          © {new Date().getFullYear()} NetSwiift. Premium data delivery.
-        </p>
+        <div className="text-sm text-muted-foreground">
+          &copy; {new Date().getFullYear()} NetSwift. All rights reserved.
+        </div>
       </div>
     </footer>
   );
@@ -508,14 +565,12 @@ function Footer() {
 
 export default function Home() {
   return (
-    <div className="min-h-screen w-full bg-background text-foreground font-sans overflow-x-hidden selection:bg-teal-500/30 selection:text-teal-200">
+    <div className="min-h-screen bg-background selection:bg-teal-500/30">
       <Navbar />
-      <main>
-        <HeroAuthSection />
-        <BuyDataSection />
-        <TrackOrderSection />
-        <SupportSection />
-      </main>
+      <HeroAuthSection />
+      <BuyDataSection />
+      <TrackOrderSection />
+      <SupportSection />
       <Footer />
     </div>
   );

@@ -1,22 +1,26 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: NetSwift API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: orders
+    description: Order operations
+  - name: dashboard
+    description: Dashboard stats
+  - name: transactions
+    description: Transaction operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +28,148 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /orders:
+    get:
+      operationId: listOrders
+      tags: [orders]
+      summary: List all orders
+      parameters:
+        - name: network
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Order"
+    post:
+      operationId: createOrder
+      tags: [orders]
+      summary: Create a new order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderBody"
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /orders/track:
+    get:
+      operationId: trackOrder
+      tags: [orders]
+      summary: Track an order by order ID or phone number
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Order ID (e.g. NSW-XXXXXXXX) or phone number
+      responses:
+        "200":
+          description: Order found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /orders/{id}:
+    get:
+      operationId: getOrder
+      tags: [orders]
+      summary: Get a single order by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Order found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /transactions:
+    get:
+      operationId: listTransactions
+      tags: [transactions]
+      summary: List all transactions
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +180,111 @@ components:
       required:
         - status
 
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        orderId:
+          type: string
+        network:
+          type: string
+        bundleSize:
+          type: string
+        bundleValidity:
+          type: string
+        phone:
+          type: string
+        status:
+          type: string
+        gbAmount:
+          type: number
+        price:
+          type: number
+        createdAt:
+          type: string
+      required:
+        - id
+        - orderId
+        - network
+        - bundleSize
+        - bundleValidity
+        - phone
+        - status
+        - gbAmount
+        - price
+        - createdAt
+
+    CreateOrderBody:
+      type: object
+      properties:
+        network:
+          type: string
+        bundleSize:
+          type: string
+        bundleValidity:
+          type: string
+        phone:
+          type: string
+        gbAmount:
+          type: number
+        price:
+          type: number
+      required:
+        - network
+        - bundleSize
+        - bundleValidity
+        - phone
+        - gbAmount
+        - price
+
+    DashboardStats:
+      type: object
+      properties:
+        walletBalance:
+          type: number
+        ordersToday:
+          type: integer
+        gbSoldToday:
+          type: number
+        successRate:
+          type: number
+        totalOrders:
+          type: integer
+      required:
+        - walletBalance
+        - ordersToday
+        - gbSoldToday
+        - successRate
+        - totalOrders
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        amount:
+          type: number
+        description:
+          type: string
+        reference:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - type
+        - amount
+        - description
+        - reference
+        - createdAt
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
