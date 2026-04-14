@@ -26,14 +26,11 @@ function getComplaints() {
 function saveComplaints(list: any[]) {
   localStorage.setItem("nsComplaints", JSON.stringify(list));
 }
-function getMockUsers() {
-  return [
-    { id: "u1", name: "Kwame Asante",    email: "kwame@example.com",   role: "user",  status: "active",    joined: "2025-12-01" },
-    { id: "u2", name: "Akua Mensah",     email: "akua@example.com",    role: "user",  status: "active",    joined: "2026-01-15" },
-    { id: "u3", name: "Kofi Boateng",    email: "kofi@example.com",    role: "agent", status: "active",    joined: "2026-02-10" },
-    { id: "u4", name: "Abena Frimpong",  email: "abena@example.com",   role: "user",  status: "suspended", joined: "2026-03-05" },
-    { id: "u5", name: "Yaw Darko",       email: "yaw@example.com",     role: "user",  status: "active",    joined: "2026-04-01" },
-  ];
+function getUsers(): any[] {
+  try { return JSON.parse(localStorage.getItem("nsUsers") ?? "[]"); } catch { return []; }
+}
+function saveUsers(list: any[]) {
+  localStorage.setItem("nsUsers", JSON.stringify(list));
 }
 
 function LoginScreen({ onLogin }: { onLogin: () => void }) {
@@ -181,63 +178,150 @@ function ComplaintsTab() {
   );
 }
 
-function UsersTab() {
-  const [users, setUsers] = useState(() => getMockUsers());
-
-  function changeRole(id: string, role: string) {
-    setUsers(u => u.map(x => x.id === id ? { ...x, role } : x));
-    toast.success(`Role updated to ${role}`);
-  }
-  function toggleStatus(id: string) {
-    setUsers(u => u.map(x => x.id === id ? { ...x, status: x.status === "active" ? "suspended" : "active" } : x));
-    toast.success("Account status updated");
-  }
-
+function UserCard({ u, actions }: { u: any; actions: React.ReactNode }) {
   const roleCls = (r: string) => {
     if (r === "admin") return "bg-purple-500/10 text-purple-400 border-purple-500/20";
     if (r === "agent") return "bg-blue-500/10 text-blue-400 border-blue-500/20";
     return "bg-white/5 text-muted-foreground border-white/10";
   };
+  const initials = u.name?.split(" ").map((p: string) => p[0]).join("").slice(0, 2).toUpperCase() ?? "?";
+  return (
+    <div className="bg-black/25 border border-white/8 rounded-2xl p-4 flex items-center gap-3">
+      <Avatar className="h-10 w-10 border border-white/10 shrink-0">
+        <AvatarFallback className="bg-gradient-to-br from-teal-500/20 to-purple-600/20 text-teal-400 text-sm font-bold">{initials}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-white truncate">{u.name}</p>
+        <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+        {u.joinedAt && <p className="text-[11px] text-muted-foreground/50 mt-0.5">Joined {format(new Date(u.joinedAt), "MMM d, yyyy")}</p>}
+      </div>
+      <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+        <Badge className={`text-xs border ${roleCls(u.role ?? "user")}`}>{u.role ?? "user"}</Badge>
+        {actions}
+      </div>
+    </div>
+  );
+}
+
+function SectionHeader({ label, count, color }: { label: string; count: number; color: string }) {
+  return (
+    <div className="flex items-center gap-2 pt-2 pb-1">
+      <span className={`text-xs font-bold uppercase tracking-widest ${color}`}>{label}</span>
+      <span className="text-xs text-muted-foreground bg-white/5 border border-white/10 rounded-full px-2 py-0.5">{count}</span>
+      <div className="flex-1 h-px bg-white/5" />
+    </div>
+  );
+}
+
+function UsersTab() {
+  const [users, setUsers] = useState<any[]>(() => getUsers());
+
+  function update(id: string, patch: Record<string, unknown>) {
+    setUsers(prev => {
+      const next = prev.map(x => x.id === id ? { ...x, ...patch } : x);
+      saveUsers(next);
+      return next;
+    });
+  }
+
+  function changeRole(id: string, role: string) {
+    update(id, { role });
+    toast.success(`Role updated to ${role}`);
+  }
+
+  function suspendUser(id: string) {
+    update(id, { status: "suspended" });
+    toast.success("User suspended");
+  }
+
+  function removeUser(id: string) {
+    update(id, { status: "removed" });
+    toast.success("User removed");
+  }
+
+  function unsuspendUser(id: string) {
+    update(id, { status: "active" });
+    toast.success("User unsuspended");
+  }
+
+  function restoreUser(id: string) {
+    update(id, { status: "active" });
+    toast.success("User restored");
+  }
+
+  const active    = users.filter(u => u.status === "active" || !u.status);
+  const suspended = users.filter(u => u.status === "suspended");
+  const removed   = users.filter(u => u.status === "removed");
+
+  if (users.length === 0) {
+    return (
+      <div className="text-center py-16 space-y-2">
+        <Users className="w-12 h-12 mx-auto text-muted-foreground/30" />
+        <p className="font-semibold text-white">No users yet</p>
+        <p className="text-sm text-muted-foreground">Users who sign up on the homepage will appear here.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-3">
-      {users.map((u, i) => (
-        <motion.div key={u.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-          className={`bg-black/25 border rounded-2xl p-4 flex items-center gap-3 ${u.status === "suspended" ? "border-red-500/20 opacity-60" : "border-white/8"}`}>
-          <Avatar className="h-10 w-10 border border-white/10 shrink-0">
-            <AvatarFallback className="bg-gradient-to-br from-teal-500/20 to-purple-600/20 text-teal-400 text-sm font-bold">
-              {u.name.split(" ").map(p => p[0]).join("").slice(0, 2)}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{u.name}</p>
-            <p className="text-xs text-muted-foreground truncate">{u.email}</p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-            <Badge className={`text-xs border ${roleCls(u.role)}`}>{u.role}</Badge>
+    <div className="space-y-2">
+      {/* ── Active ── */}
+      <SectionHeader label="Active" count={active.length} color="text-emerald-400" />
+      {active.length === 0 && <p className="text-xs text-muted-foreground px-1 pb-2">No active users.</p>}
+      {active.map((u, i) => (
+        <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
+          <UserCard u={u} actions={
+            <div className="flex items-center gap-1.5">
+              <select value={u.role ?? "user"} onChange={e => changeRole(u.id, e.target.value)}
+                className="h-7 px-2 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-teal-500">
+                <option value="user">User</option>
+                <option value="agent">Agent</option>
+                <option value="admin">Admin</option>
+              </select>
+              <button onClick={() => suspendUser(u.id)} title="Suspend"
+                className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors whitespace-nowrap">
+                Suspend
+              </button>
+              <button onClick={() => removeUser(u.id)} title="Remove"
+                className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors whitespace-nowrap">
+                Remove
+              </button>
+            </div>
+          } />
+        </motion.div>
+      ))}
 
-            {/* Role actions */}
-            <select
-              value={u.role}
-              onChange={e => changeRole(u.id, e.target.value)}
-              className="h-7 px-2 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-teal-500"
-            >
-              <option value="user">User</option>
-              <option value="agent">Agent</option>
-              <option value="admin">Admin</option>
-            </select>
+      {/* ── Suspended ── */}
+      <SectionHeader label="Suspended" count={suspended.length} color="text-amber-400" />
+      {suspended.length === 0 && <p className="text-xs text-muted-foreground px-1 pb-2">No suspended users.</p>}
+      {suspended.map((u, i) => (
+        <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
+          <UserCard u={u} actions={
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => unsuspendUser(u.id)}
+                className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors whitespace-nowrap">
+                Unsuspend
+              </button>
+              <button onClick={() => removeUser(u.id)}
+                className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors whitespace-nowrap">
+                Remove
+              </button>
+            </div>
+          } />
+        </motion.div>
+      ))}
 
-            <button onClick={() => toggleStatus(u.id)}
-              className={`h-7 w-7 rounded-lg flex items-center justify-center border transition-colors
-                ${u.status === "active"
-                  ? "border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                  : "border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                }`}
-              title={u.status === "active" ? "Suspend" : "Activate"}
-            >
-              {u.status === "active" ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
+      {/* ── Removed ── */}
+      <SectionHeader label="Removed" count={removed.length} color="text-red-400" />
+      {removed.length === 0 && <p className="text-xs text-muted-foreground px-1 pb-2">No removed users.</p>}
+      {removed.map((u, i) => (
+        <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
+          <UserCard u={u} actions={
+            <button onClick={() => restoreUser(u.id)}
+              className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-white/10 bg-white/5 text-muted-foreground hover:text-white hover:bg-white/10 transition-colors whitespace-nowrap">
+              Restore
             </button>
-          </div>
+          } />
         </motion.div>
       ))}
     </div>
