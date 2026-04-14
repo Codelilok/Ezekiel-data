@@ -163,6 +163,9 @@ function HeroAuthSection() {
             Buy Data Now
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
+          <Button size="lg" variant="outline" className="h-14 px-8 text-base border-white/10 bg-white/5 hover:bg-white/10" onClick={() => scrollTo('track')}>
+            Track Order
+          </Button>
         </div>
       </div>
 
@@ -647,13 +650,21 @@ function ComplaintButton({ prefillRef }: { prefillRef?: string }) {
     <div className="mt-8">
       <AnimatePresence mode="wait">
         {!open && !done && (
-          <motion.div key="btn" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center">
+          <motion.div key="btn" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <button
               onClick={() => setOpen(true)}
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-red-400 transition-colors border border-white/10 hover:border-red-400/30 rounded-full px-5 py-2 bg-white/3 hover:bg-red-400/5"
+              className="group w-full flex items-center justify-between gap-4 p-4 rounded-2xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 hover:border-red-500/40 transition-all cursor-pointer active:scale-[0.99]"
             >
-              <AlertCircle className="w-4 h-4" />
-              Having an issue with your order? Make a complaint
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-red-500/15 flex items-center justify-center shrink-0 group-hover:bg-red-500/25 transition-colors">
+                  <AlertCircle className="w-4 h-4 text-red-400" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-white">Having an issue with your order?</p>
+                  <p className="text-xs text-muted-foreground">Tap here to make a complaint</p>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-red-400 shrink-0 group-hover:translate-x-1 transition-transform" />
             </button>
           </motion.div>
         )}

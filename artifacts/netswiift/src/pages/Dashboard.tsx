@@ -171,19 +171,11 @@ export default function Dashboard() {
         <div className="flex-1 p-4 md:p-6 space-y-6 overflow-y-auto pb-24">
           
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-0.5">Good day,</p>
-                <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
-                  {firstName}
-                </h2>
-              </div>
-              <Link href="/mtn">
-                <Button className="h-9 bg-gradient-to-r from-teal-500 to-purple-600 text-white text-sm font-semibold border-none shadow-lg shadow-teal-500/20 hover:shadow-teal-500/40 transition-shadow">
-                  <Plus className="w-4 h-4 mr-1.5" />
-                  Buy Data
-                </Button>
-              </Link>
+            <div>
+              <p className="text-sm text-muted-foreground mb-0.5">Good day,</p>
+              <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
+                {firstName}
+              </h2>
             </div>
           </motion.div>
 
@@ -289,7 +281,7 @@ export default function Dashboard() {
                 { href: "/orders", icon: Package, label: "All Orders", color: "text-purple-400", bg: "bg-purple-500/10 hover:bg-purple-500/20", border: "border-purple-500/20" },
                 { href: "/transactions", icon: CreditCard, label: "Transactions", color: "text-blue-400", bg: "bg-blue-500/10 hover:bg-blue-500/20", border: "border-blue-500/20" },
                 { href: "/history", icon: Clock, label: "History", color: "text-amber-400", bg: "bg-amber-500/10 hover:bg-amber-500/20", border: "border-amber-500/20" },
-                { href: "/mtn", icon: RefreshCw, label: "Bulk Orders", color: "text-teal-400", bg: "bg-teal-500/10 hover:bg-teal-500/20", border: "border-teal-500/20" },
+                { href: "/bulk-orders", icon: RefreshCw, label: "Bulk Orders", color: "text-teal-400", bg: "bg-teal-500/10 hover:bg-teal-500/20", border: "border-teal-500/20" },
               ].map(item => (
                 <Link key={item.href} href={item.href}>
                   <div className={`flex items-center gap-3 p-4 rounded-xl border ${item.border} ${item.bg} cursor-pointer transition-all`}>

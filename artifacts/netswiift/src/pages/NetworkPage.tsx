@@ -188,7 +188,6 @@ export default function NetworkPage({
                       <p className="text-3xl font-extrabold text-white tracking-tight leading-none mb-1">
                         {b.size}
                       </p>
-                      {b.validity !== "2 days" && <p className="text-xs text-muted-foreground mb-3">{b.validity}</p>}
                       <p className={`text-base font-bold ${t.text}`}>{b.price}</p>
 
                       {bundle === b.id && (

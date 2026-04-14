@@ -10,6 +10,7 @@ import NetworkPage from "@/pages/NetworkPage";
 import OrdersPage from "@/pages/OrdersPage";
 import TransactionsPage from "@/pages/TransactionsPage";
 import Profile from "@/pages/Profile";
+import BulkOrders from "@/pages/BulkOrders";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/history" component={OrdersPage} />
       <Route path="/transactions" component={TransactionsPage} />
       <Route path="/profile" component={Profile} />
+      <Route path="/bulk-orders" component={BulkOrders} />
       <Route component={NotFound} />
     </Switch>
   );
