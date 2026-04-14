@@ -218,7 +218,7 @@ export default function Dashboard() {
             {/* 3 stat cards */}
             <div className="grid grid-cols-3 gap-3">
               {statsLoading ? (
-                Array(3).fill(0).map((_, i) => (
+                Array(2).fill(0).map((_, i) => (
                   <Card key={i} className="border-white/5 bg-white/5"><CardContent className="p-4"><Skeleton className="h-16 w-full bg-white/10" /></CardContent></Card>
                 ))
               ) : (
@@ -249,19 +249,7 @@ export default function Dashboard() {
                     </Card>
                   </motion.div>
 
-                  <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                    <Card className="border-emerald-500/20 bg-emerald-500/5 backdrop-blur-xl hover:bg-emerald-500/10 transition-colors">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <CheckCircle className="w-4 h-4 text-emerald-400" />
-                          <ArrowUpRight className="w-3.5 h-3.5 text-emerald-400 opacity-60" />
-                        </div>
-                        <p className="text-2xl font-bold text-white">{stats?.successRate ?? 0}<span className="text-sm font-normal text-muted-foreground">%</span></p>
-                        <p className="text-xs text-muted-foreground mt-0.5">Success Rate</p>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                </>
+                    </>
               )}
             </div>
           </div>

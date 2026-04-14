@@ -33,10 +33,8 @@ function Navbar() {
           </span>
         </div>
         <div className="flex gap-4 sm:gap-6 text-sm font-medium text-muted-foreground">
-          <button onClick={() => scrollTo('hero')} className="hover:text-foreground transition-colors">Home</button>
+          <button onClick={() => scrollTo('track')} className="hover:text-foreground transition-colors">Track Order</button>
           <button onClick={() => scrollTo('buy')} className="hover:text-foreground transition-colors">Buy Data</button>
-          <button onClick={() => scrollTo('track')} className="hover:text-foreground transition-colors hidden sm:inline">Track Order</button>
-          <button onClick={() => scrollTo('support')} className="hover:text-foreground transition-colors hidden sm:inline">Support</button>
         </div>
       </div>
     </nav>
@@ -828,7 +826,6 @@ export default function Home() {
       <HeroAuthSection />
       <BuyDataSection />
       <TrackOrderSection />
-      <SupportSection />
       <Footer />
     </div>
   );
