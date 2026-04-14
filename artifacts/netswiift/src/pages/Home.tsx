@@ -117,6 +117,21 @@ function HeroAuthSection() {
       const users: any[] = (() => { try { return JSON.parse(localStorage.getItem("nsUsers") ?? "[]"); } catch { return []; } })();
       const existing = users.find((u: any) => u.email === loginEmail);
       if (existing) {
+        if (existing.status === "suspended") {
+          toast.error("Your account has been suspended. Please contact support.");
+          return;
+        }
+        if (existing.status === "removed") {
+          toast.error("This account has been removed.");
+          return;
+        }
+        if (existing.role === "admin") {
+          localStorage.setItem("nsAdmin", JSON.stringify({ email: existing.email, role: "admin" }));
+          localStorage.setItem("nsUser", JSON.stringify({ name: existing.name, email: existing.email }));
+          toast.success(`Welcome back, ${existing.name}`);
+          setLocation("/admin");
+          return;
+        }
         localStorage.setItem("nsUser", JSON.stringify({ name: existing.name, email: existing.email }));
       } else {
         const name = loginEmail.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());

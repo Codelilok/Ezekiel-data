@@ -2,10 +2,9 @@ import React, { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Zap, LogOut, Users, Package, MessageSquare, Shield,
-  CheckCircle2, Clock, XCircle, ChevronRight, Eye, EyeOff,
-  UserCheck, UserX, AlertTriangle, Loader2, Check, X, RefreshCw,
-  UserCog, Briefcase
+  LogOut, Users, Package, MessageSquare, Shield,
+  Eye, EyeOff, UserCheck, Loader2, Check, RefreshCw,
+  UserCog, Briefcase, UserX, Ban
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +18,7 @@ import { useListOrders } from "@workspace/api-client-react";
 const ADMIN_EMAIL    = "codelilok@gmail.com";
 const ADMIN_PASSWORD = "NetSwift@26";
 
-type Tab = "orders" | "complaints" | "users" | "agents" | "admins";
+type Tab = "orders" | "complaints" | "users" | "agents" | "admins" | "suspended" | "removed";
 
 function getComplaints() {
   try { return JSON.parse(localStorage.getItem("nsComplaints") ?? "[]"); } catch { return []; }
@@ -42,7 +41,14 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
+    const users: any[] = getUsers();
+    const matchedUser = users.find((u: any) => u.email === email && u.role === "admin" && u.status !== "suspended" && u.status !== "removed");
+    const isMainAdmin = email === ADMIN_EMAIL && password === ADMIN_PASSWORD;
+    if (!isMainAdmin && !matchedUser) {
+      toast.error("Invalid admin credentials");
+      return;
+    }
+    if (matchedUser && !isMainAdmin) {
       toast.error("Invalid admin credentials");
       return;
     }
@@ -99,16 +105,14 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 function ComplaintsTab() {
   const [complaints, setComplaints] = useState<any[]>(() => getComplaints());
 
-  function acceptComplaint(id: string, agent: string = "Admin") {
-    const updated = complaints.map(c => c.id === id ? { ...c, status: "Accepted", acceptedBy: agent } : c);
-    setComplaints(updated);
-    saveComplaints(updated);
+  function acceptComplaint(id: string) {
+    const updated = complaints.map(c => c.id === id ? { ...c, status: "Accepted", acceptedBy: "Admin" } : c);
+    setComplaints(updated); saveComplaints(updated);
     toast.success("Complaint accepted — you're now working on it");
   }
   function resolveComplaint(id: string) {
     const updated = complaints.map(c => c.id === id ? { ...c, status: "Resolved" } : c);
-    setComplaints(updated);
-    saveComplaints(updated);
+    setComplaints(updated); saveComplaints(updated);
     toast.success("Complaint marked as resolved");
   }
 
@@ -139,7 +143,6 @@ function ComplaintsTab() {
               </div>
               <span className="text-xs text-muted-foreground shrink-0">{c.createdAt ? format(new Date(c.createdAt), "MMM d, h:mm a") : ""}</span>
             </div>
-
             <div className="bg-black/30 rounded-xl p-3 border border-white/5 text-sm space-y-1.5">
               <p className="text-xs font-bold text-white uppercase tracking-wider mb-2">ORDER COMPLAINT</p>
               {[
@@ -157,7 +160,6 @@ function ComplaintsTab() {
                 {c.message && <p className="text-white text-xs">"{c.message}"</p>}
               </div>
             </div>
-
             <div className="flex gap-2">
               {c.status === "Submitted" && (
                 <Button size="sm" onClick={() => acceptComplaint(c.id)}
@@ -204,19 +206,8 @@ function UserCard({ u, actions }: { u: any; actions: React.ReactNode }) {
   );
 }
 
-function SectionHeader({ label, count, color }: { label: string; count: number; color: string }) {
-  return (
-    <div className="flex items-center gap-2 pt-2 pb-1">
-      <span className={`text-xs font-bold uppercase tracking-widest ${color}`}>{label}</span>
-      <span className="text-xs text-muted-foreground bg-white/5 border border-white/10 rounded-full px-2 py-0.5">{count}</span>
-      <div className="flex-1 h-px bg-white/5" />
-    </div>
-  );
-}
-
-function UsersTab() {
+function useUsersMutate() {
   const [users, setUsers] = useState<any[]>(() => getUsers());
-
   function update(id: string, patch: Record<string, unknown>) {
     setUsers(prev => {
       const next = prev.map(x => x.id === id ? { ...x, ...patch } : x);
@@ -224,37 +215,19 @@ function UsersTab() {
       return next;
     });
   }
+  return { users, update };
+}
 
-  function changeRole(id: string, role: string) {
-    update(id, { role });
-    toast.success(`Role updated to ${role}`);
-  }
+function UsersTab() {
+  const { users, update } = useUsersMutate();
 
-  function suspendUser(id: string) {
-    update(id, { status: "suspended" });
-    toast.success("User suspended");
-  }
+  function changeRole(id: string, role: string) { update(id, { role }); toast.success(`Role updated to ${role}`); }
+  function suspend(id: string)  { update(id, { status: "suspended" }); toast.success("User suspended"); }
+  function remove(id: string)   { update(id, { status: "removed" });   toast.success("User removed"); }
 
-  function removeUser(id: string) {
-    update(id, { status: "removed" });
-    toast.success("User removed");
-  }
+  const active = users.filter(u => u.role === "user" && (u.status === "active" || !u.status));
 
-  function unsuspendUser(id: string) {
-    update(id, { status: "active" });
-    toast.success("User unsuspended");
-  }
-
-  function restoreUser(id: string) {
-    update(id, { status: "active" });
-    toast.success("User restored");
-  }
-
-  const active    = users.filter(u => u.status === "active" || !u.status);
-  const suspended = users.filter(u => u.status === "suspended");
-  const removed   = users.filter(u => u.status === "removed");
-
-  if (users.length === 0) {
+  if (users.filter(u => u.role === "user").length === 0) {
     return (
       <div className="text-center py-16 space-y-2">
         <Users className="w-12 h-12 mx-auto text-muted-foreground/30" />
@@ -266,8 +239,6 @@ function UsersTab() {
 
   return (
     <div className="space-y-2">
-      {/* ── Active ── */}
-      <SectionHeader label="Active" count={active.length} color="text-emerald-400" />
       {active.length === 0 && <p className="text-xs text-muted-foreground px-1 pb-2">No active users.</p>}
       {active.map((u, i) => (
         <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
@@ -279,49 +250,15 @@ function UsersTab() {
                 <option value="agent">Agent</option>
                 <option value="admin">Admin</option>
               </select>
-              <button onClick={() => suspendUser(u.id)} title="Suspend"
+              <button onClick={() => suspend(u.id)}
                 className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors whitespace-nowrap">
                 Suspend
               </button>
-              <button onClick={() => removeUser(u.id)} title="Remove"
+              <button onClick={() => remove(u.id)}
                 className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors whitespace-nowrap">
                 Remove
               </button>
             </div>
-          } />
-        </motion.div>
-      ))}
-
-      {/* ── Suspended ── */}
-      <SectionHeader label="Suspended" count={suspended.length} color="text-amber-400" />
-      {suspended.length === 0 && <p className="text-xs text-muted-foreground px-1 pb-2">No suspended users.</p>}
-      {suspended.map((u, i) => (
-        <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-          <UserCard u={u} actions={
-            <div className="flex items-center gap-1.5">
-              <button onClick={() => unsuspendUser(u.id)}
-                className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors whitespace-nowrap">
-                Unsuspend
-              </button>
-              <button onClick={() => removeUser(u.id)}
-                className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors whitespace-nowrap">
-                Remove
-              </button>
-            </div>
-          } />
-        </motion.div>
-      ))}
-
-      {/* ── Removed ── */}
-      <SectionHeader label="Removed" count={removed.length} color="text-red-400" />
-      {removed.length === 0 && <p className="text-xs text-muted-foreground px-1 pb-2">No removed users.</p>}
-      {removed.map((u, i) => (
-        <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-          <UserCard u={u} actions={
-            <button onClick={() => restoreUser(u.id)}
-              className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-white/10 bg-white/5 text-muted-foreground hover:text-white hover:bg-white/10 transition-colors whitespace-nowrap">
-              Restore
-            </button>
           } />
         </motion.div>
       ))}
@@ -330,99 +267,46 @@ function UsersTab() {
 }
 
 function AgentsTab() {
-  const [users, setUsers] = useState<any[]>(() => getUsers());
+  const { users, update } = useUsersMutate();
 
-  function update(id: string, patch: Record<string, unknown>) {
-    setUsers(prev => {
-      const next = prev.map(x => x.id === id ? { ...x, ...patch } : x);
-      saveUsers(next);
-      return next;
-    });
-  }
+  function changeRole(id: string, role: string) { update(id, { role }); toast.success(`Role updated to ${role}`); }
+  function suspend(id: string) { update(id, { status: "suspended" }); toast.success("Agent suspended"); }
+  function remove(id: string)  { update(id, { status: "removed" });   toast.success("Agent removed"); }
 
-  function demoteAgent(id: string) {
-    update(id, { role: "user" });
-    toast.success("Agent demoted to user");
-  }
+  const active = users.filter(u => u.role === "agent" && (u.status === "active" || !u.status));
 
-  function suspendAgent(id: string) {
-    update(id, { status: "suspended" });
-    toast.success("Agent suspended");
-  }
-
-  function removeAgent(id: string) {
-    update(id, { status: "removed" });
-    toast.success("Agent removed");
-  }
-
-  const agents = users.filter(u => u.role === "agent");
-  const active    = agents.filter(u => u.status === "active" || !u.status);
-  const suspended = agents.filter(u => u.status === "suspended");
-  const removed   = agents.filter(u => u.status === "removed");
-
-  if (agents.length === 0) {
+  if (users.filter(u => u.role === "agent").length === 0) {
     return (
       <div className="text-center py-16 space-y-2">
         <Briefcase className="w-12 h-12 mx-auto text-muted-foreground/30" />
         <p className="font-semibold text-white">No agents yet</p>
-        <p className="text-sm text-muted-foreground">Assign agent roles to users in the Users tab.</p>
+        <p className="text-sm text-muted-foreground">Assign the agent role to a user in the Users tab.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      <SectionHeader label="Active Agents" count={active.length} color="text-blue-400" />
       {active.length === 0 && <p className="text-xs text-muted-foreground px-1 pb-2">No active agents.</p>}
       {active.map((u, i) => (
         <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
           <UserCard u={u} actions={
             <div className="flex items-center gap-1.5">
-              <button onClick={() => demoteAgent(u.id)}
-                className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-white/10 bg-white/5 text-muted-foreground hover:text-white hover:bg-white/10 transition-colors whitespace-nowrap">
-                Demote
-              </button>
-              <button onClick={() => suspendAgent(u.id)}
+              <select value={u.role ?? "agent"} onChange={e => changeRole(u.id, e.target.value)}
+                className="h-7 px-2 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-teal-500">
+                <option value="user">User</option>
+                <option value="agent">Agent</option>
+                <option value="admin">Admin</option>
+              </select>
+              <button onClick={() => suspend(u.id)}
                 className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors whitespace-nowrap">
                 Suspend
               </button>
-              <button onClick={() => removeAgent(u.id)}
+              <button onClick={() => remove(u.id)}
                 className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors whitespace-nowrap">
                 Remove
               </button>
             </div>
-          } />
-        </motion.div>
-      ))}
-
-      <SectionHeader label="Suspended" count={suspended.length} color="text-amber-400" />
-      {suspended.length === 0 && <p className="text-xs text-muted-foreground px-1 pb-2">No suspended agents.</p>}
-      {suspended.map((u, i) => (
-        <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-          <UserCard u={u} actions={
-            <div className="flex items-center gap-1.5">
-              <button onClick={() => update(u.id, { status: "active" })}
-                className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors whitespace-nowrap">
-                Unsuspend
-              </button>
-              <button onClick={() => removeAgent(u.id)}
-                className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors whitespace-nowrap">
-                Remove
-              </button>
-            </div>
-          } />
-        </motion.div>
-      ))}
-
-      <SectionHeader label="Removed" count={removed.length} color="text-red-400" />
-      {removed.length === 0 && <p className="text-xs text-muted-foreground px-1 pb-2">No removed agents.</p>}
-      {removed.map((u, i) => (
-        <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-          <UserCard u={u} actions={
-            <button onClick={() => update(u.id, { status: "active" })}
-              className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-white/10 bg-white/5 text-muted-foreground hover:text-white hover:bg-white/10 transition-colors whitespace-nowrap">
-              Restore
-            </button>
           } />
         </motion.div>
       ))}
@@ -431,63 +315,42 @@ function AgentsTab() {
 }
 
 function AdminsTab() {
-  const [users, setUsers] = useState<any[]>(() => getUsers());
+  const { users, update } = useUsersMutate();
 
-  function update(id: string, patch: Record<string, unknown>) {
-    setUsers(prev => {
-      const next = prev.map(x => x.id === id ? { ...x, ...patch } : x);
-      saveUsers(next);
-      return next;
-    });
-  }
+  function changeRole(id: string, role: string) { update(id, { role }); toast.success(`Role updated to ${role}`); }
+  function suspend(id: string) { update(id, { status: "suspended" }); toast.success("Admin suspended"); }
+  function remove(id: string)  { update(id, { status: "removed" });   toast.success("Admin removed"); }
 
-  function demoteAdmin(id: string) {
-    update(id, { role: "user" });
-    toast.success("Admin demoted to user");
-  }
+  const active = users.filter(u => u.role === "admin" && (u.status === "active" || !u.status));
 
-  function suspendAdmin(id: string) {
-    update(id, { status: "suspended" });
-    toast.success("Admin suspended");
-  }
-
-  function removeAdmin(id: string) {
-    update(id, { status: "removed" });
-    toast.success("Admin removed");
-  }
-
-  const admins = users.filter(u => u.role === "admin");
-  const active    = admins.filter(u => u.status === "active" || !u.status);
-  const suspended = admins.filter(u => u.status === "suspended");
-  const removed   = admins.filter(u => u.status === "removed");
-
-  if (admins.length === 0) {
+  if (users.filter(u => u.role === "admin").length === 0) {
     return (
       <div className="text-center py-16 space-y-2">
         <UserCog className="w-12 h-12 mx-auto text-muted-foreground/30" />
         <p className="font-semibold text-white">No admins listed</p>
-        <p className="text-sm text-muted-foreground">Assign admin roles to users in the Users tab.</p>
+        <p className="text-sm text-muted-foreground">Assign the admin role to a user in the Users tab.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-2">
-      <SectionHeader label="Active Admins" count={active.length} color="text-purple-400" />
       {active.length === 0 && <p className="text-xs text-muted-foreground px-1 pb-2">No active admins.</p>}
       {active.map((u, i) => (
         <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
           <UserCard u={u} actions={
             <div className="flex items-center gap-1.5">
-              <button onClick={() => demoteAdmin(u.id)}
-                className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-white/10 bg-white/5 text-muted-foreground hover:text-white hover:bg-white/10 transition-colors whitespace-nowrap">
-                Demote
-              </button>
-              <button onClick={() => suspendAdmin(u.id)}
+              <select value={u.role ?? "admin"} onChange={e => changeRole(u.id, e.target.value)}
+                className="h-7 px-2 text-xs bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-teal-500">
+                <option value="user">User</option>
+                <option value="agent">Agent</option>
+                <option value="admin">Admin</option>
+              </select>
+              <button onClick={() => suspend(u.id)}
                 className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors whitespace-nowrap">
                 Suspend
               </button>
-              <button onClick={() => removeAdmin(u.id)}
+              <button onClick={() => remove(u.id)}
                 className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors whitespace-nowrap">
                 Remove
               </button>
@@ -495,18 +358,39 @@ function AdminsTab() {
           } />
         </motion.div>
       ))}
+    </div>
+  );
+}
 
-      <SectionHeader label="Suspended" count={suspended.length} color="text-amber-400" />
-      {suspended.length === 0 && <p className="text-xs text-muted-foreground px-1 pb-2">No suspended admins.</p>}
+function SuspendedTab() {
+  const { users, update } = useUsersMutate();
+
+  function unsuspend(id: string) { update(id, { status: "active" });   toast.success("User unsuspended"); }
+  function remove(id: string)    { update(id, { status: "removed" });  toast.success("User removed"); }
+
+  const suspended = users.filter(u => u.status === "suspended");
+
+  if (suspended.length === 0) {
+    return (
+      <div className="text-center py-16 space-y-2">
+        <Ban className="w-12 h-12 mx-auto text-muted-foreground/30" />
+        <p className="font-semibold text-white">No suspended accounts</p>
+        <p className="text-sm text-muted-foreground">Suspended users will appear here.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
       {suspended.map((u, i) => (
         <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
           <UserCard u={u} actions={
             <div className="flex items-center gap-1.5">
-              <button onClick={() => update(u.id, { status: "active" })}
+              <button onClick={() => unsuspend(u.id)}
                 className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors whitespace-nowrap">
                 Unsuspend
               </button>
-              <button onClick={() => removeAdmin(u.id)}
+              <button onClick={() => remove(u.id)}
                 className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-red-500/20 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors whitespace-nowrap">
                 Remove
               </button>
@@ -514,13 +398,33 @@ function AdminsTab() {
           } />
         </motion.div>
       ))}
+    </div>
+  );
+}
 
-      <SectionHeader label="Removed" count={removed.length} color="text-red-400" />
-      {removed.length === 0 && <p className="text-xs text-muted-foreground px-1 pb-2">No removed admins.</p>}
+function RemovedTab() {
+  const { users, update } = useUsersMutate();
+
+  function restore(id: string) { update(id, { status: "active" }); toast.success("User restored"); }
+
+  const removed = users.filter(u => u.status === "removed");
+
+  if (removed.length === 0) {
+    return (
+      <div className="text-center py-16 space-y-2">
+        <UserX className="w-12 h-12 mx-auto text-muted-foreground/30" />
+        <p className="font-semibold text-white">No removed accounts</p>
+        <p className="text-sm text-muted-foreground">Removed users will appear here.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
       {removed.map((u, i) => (
         <motion.div key={u.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
           <UserCard u={u} actions={
-            <button onClick={() => update(u.id, { status: "active" })}
+            <button onClick={() => restore(u.id)}
               className="h-7 px-2 rounded-lg text-[11px] font-semibold border border-white/10 bg-white/5 text-muted-foreground hover:text-white hover:bg-white/10 transition-colors whitespace-nowrap">
               Restore
             </button>
@@ -607,12 +511,23 @@ export default function Admin() {
 
   if (!loggedIn) return <LoginScreen onLogin={() => setLoggedIn(true)} />;
 
-  const TABS = [
-    { id: "orders" as Tab,     label: "Orders",     icon: Package },
-    { id: "complaints" as Tab, label: "Complaints", icon: MessageSquare },
-    { id: "users" as Tab,      label: "Users",      icon: Users },
-    { id: "agents" as Tab,     label: "Agents",     icon: Briefcase },
-    { id: "admins" as Tab,     label: "Admins",     icon: UserCog },
+  const allUsers = getUsers();
+  const counts = {
+    users:     allUsers.filter(u => u.role === "user"  && (u.status === "active" || !u.status)).length,
+    agents:    allUsers.filter(u => u.role === "agent" && (u.status === "active" || !u.status)).length,
+    admins:    allUsers.filter(u => u.role === "admin" && (u.status === "active" || !u.status)).length,
+    suspended: allUsers.filter(u => u.status === "suspended").length,
+    removed:   allUsers.filter(u => u.status === "removed").length,
+  };
+
+  const TABS: { id: Tab; label: string; icon: React.ElementType; count?: number; activeColor?: string }[] = [
+    { id: "orders",     label: "Orders",     icon: Package },
+    { id: "complaints", label: "Complaints", icon: MessageSquare },
+    { id: "users",      label: "Users",      icon: Users,    count: counts.users },
+    { id: "agents",     label: "Agents",     icon: Briefcase, count: counts.agents },
+    { id: "admins",     label: "Admins",     icon: UserCog,  count: counts.admins },
+    { id: "suspended",  label: "Suspended",  icon: Ban,      count: counts.suspended, activeColor: "bg-amber-500/15 text-amber-300" },
+    { id: "removed",    label: "Removed",    icon: UserX,    count: counts.removed,   activeColor: "bg-red-500/15 text-red-300" },
   ];
 
   return (
@@ -632,15 +547,23 @@ export default function Admin() {
       </header>
 
       <div className="max-w-3xl mx-auto w-full px-4 py-6 space-y-5 flex-1">
-        {/* Tab bar */}
         <div className="flex gap-1 bg-black/20 border border-white/8 rounded-2xl p-1 overflow-x-auto scrollbar-none">
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              className={`flex-shrink-0 flex items-center justify-center gap-1.5 h-9 px-3 rounded-xl text-xs font-semibold transition-all whitespace-nowrap
-                ${tab === t.id ? "bg-white/10 text-white" : "text-muted-foreground hover:text-white"}`}>
-              <t.icon className="w-3.5 h-3.5" />{t.label}
-            </button>
-          ))}
+          {TABS.map(t => {
+            const isActive = tab === t.id;
+            const activeClass = t.activeColor && isActive ? t.activeColor : isActive ? "bg-white/10 text-white" : "text-muted-foreground hover:text-white";
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={`flex-shrink-0 flex items-center justify-center gap-1.5 h-9 px-3 rounded-xl text-xs font-semibold transition-all whitespace-nowrap ${activeClass}`}>
+                <t.icon className="w-3.5 h-3.5" />
+                {t.label}
+                {t.count !== undefined && (
+                  <span className={`ml-0.5 text-[10px] font-bold rounded-full px-1.5 py-0.5 leading-none ${
+                    isActive ? "bg-white/20" : "bg-white/8 text-muted-foreground"
+                  }`}>{t.count}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         <AnimatePresence mode="wait">
@@ -650,6 +573,8 @@ export default function Admin() {
             {tab === "users"      && <UsersTab />}
             {tab === "agents"     && <AgentsTab />}
             {tab === "admins"     && <AdminsTab />}
+            {tab === "suspended"  && <SuspendedTab />}
+            {tab === "removed"    && <RemovedTab />}
           </motion.div>
         </AnimatePresence>
       </div>
