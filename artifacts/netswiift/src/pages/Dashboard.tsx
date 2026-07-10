@@ -9,7 +9,7 @@ import {
   Menu, Bell, Wifi, Zap,
   ChevronRight, LogOut, TrendingUp, ArrowUpRight,
   ArrowDownRight, Plus, RefreshCw, Activity, ShieldCheck,
-  X, Loader2, Check, Wallet
+  X, Loader2, Check, Wallet, MessageSquare
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -224,6 +224,9 @@ export default function Dashboard() {
         </Link>
         <Link href="/transactions" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-muted-foreground hover:bg-white/5 hover:text-white transition-colors text-sm">
           <CreditCard className="w-4 h-4" />Transactions
+        </Link>
+        <Link href="/complaints" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-muted-foreground hover:bg-white/5 hover:text-white transition-colors text-sm">
+          <MessageSquare className="w-4 h-4" />My Complaints
         </Link>
 
         <div className="pt-5 pb-2 px-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Quick Buy</div>

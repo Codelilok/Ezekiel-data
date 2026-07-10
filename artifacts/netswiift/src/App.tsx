@@ -1,4 +1,5 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
+import MyComplaints from "@/pages/MyComplaints";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
@@ -33,6 +34,7 @@ function Router() {
       <Route path="/transactions" component={TransactionsPage} />
       <Route path="/profile" component={Profile} />
       <Route path="/bulk-orders" component={BulkOrders} />
+      <Route path="/complaints" component={MyComplaints} />
       <Route path="/admin" component={Admin} />
       <Route path="/agent" component={Agent} />
       <Route path="/blocked" component={Blocked} />
