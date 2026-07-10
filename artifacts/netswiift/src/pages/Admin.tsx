@@ -42,20 +42,16 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const users: any[] = getUsers();
-    const matchedUser = users.find((u: any) => u.email === email && u.role === "admin" && u.status !== "suspended" && u.status !== "removed");
-    const isMainAdmin = email === ADMIN_EMAIL && password === ADMIN_PASSWORD;
-    if (!isMainAdmin && !matchedUser) {
-      toast.error("Invalid admin credentials");
-      return;
-    }
-    if (matchedUser && !isMainAdmin) {
+    const isMainAdmin =
+      email.trim().toLowerCase() === ADMIN_EMAIL.toLowerCase() &&
+      password === ADMIN_PASSWORD;
+    if (!isMainAdmin) {
       toast.error("Invalid admin credentials");
       return;
     }
     setLoading(true);
     setTimeout(() => {
-      localStorage.setItem("nsAdmin", JSON.stringify({ email, role: "admin" }));
+      localStorage.setItem("nsAdmin", JSON.stringify({ email: ADMIN_EMAIL, role: "admin" }));
       setLoading(false);
       onLogin();
     }, 900);
@@ -438,7 +434,13 @@ function RemovedTab() {
 
 function OrdersTab() {
   const { data: apiOrders, isLoading, refetch } = useListOrders({});
-  const orders = (!isLoading && (!apiOrders || apiOrders.length === 0)) ? getLocalOrders() : apiOrders;
+  // Guard: normalise wrapped envelope { status, data:[...] } to plain array
+  const ordersArray: typeof apiOrders = Array.isArray(apiOrders)
+    ? apiOrders
+    : Array.isArray((apiOrders as any)?.data)
+    ? (apiOrders as any).data
+    : undefined;
+  const orders = (!isLoading && (!ordersArray || ordersArray.length === 0)) ? getLocalOrders() : ordersArray;
 
   const statusCls = (s: string) => {
     switch (s.toLowerCase()) {

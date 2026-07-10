@@ -182,9 +182,15 @@ export default function Dashboard() {
   const { data: apiOrders, isLoading: ordersLoading } = useListOrders({ limit: 6 }, { query: { refetchInterval: 30000, staleTime: 10000 } } as any);
   const { data: recentTx } = useListTransactions({ limit: 4 }, { query: { refetchInterval: 30000, staleTime: 10000 } } as any);
 
-  const recentOrders = (!ordersLoading && (!apiOrders || apiOrders.length === 0))
+  // Guard: server used to return { status, data:[...] } — normalise to array
+  const ordersArray: typeof apiOrders = Array.isArray(apiOrders)
+    ? apiOrders
+    : Array.isArray((apiOrders as any)?.data)
+    ? (apiOrders as any).data
+    : undefined;
+  const recentOrders = (!ordersLoading && (!ordersArray || ordersArray.length === 0))
     ? getLocalOrders().slice(0, 6)
-    : apiOrders;
+    : ordersArray;
 
   function handleLogout() {
     localStorage.removeItem("nsUser");

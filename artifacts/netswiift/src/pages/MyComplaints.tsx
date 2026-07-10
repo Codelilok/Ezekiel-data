@@ -25,15 +25,8 @@ interface Complaint {
   message: string;
   status: "Submitted" | "Accepted" | "Resolved";
   acceptedBy: string | null;
+  userEmail?: string;
   createdAt: string;
-}
-
-function getComplaints(): Complaint[] {
-  try {
-    return JSON.parse(localStorage.getItem("nsComplaints") ?? "[]");
-  } catch {
-    return [];
-  }
 }
 
 function getUser() {
@@ -42,6 +35,26 @@ function getUser() {
     if (raw) return JSON.parse(raw) as { name: string; email: string };
   } catch {}
   return { name: "Alex", email: "alex@netswift.app" };
+}
+
+function getMyComplaints(userEmail: string): Complaint[] {
+  try {
+    const all: Complaint[] = JSON.parse(localStorage.getItem("nsComplaints") ?? "[]");
+    // Show complaints owned by this user, OR legacy complaints with no owner (userEmail: "")
+    return all.filter((c) => !c.userEmail || c.userEmail === userEmail);
+  } catch {
+    return [];
+  }
+}
+
+function safeDate(iso: string): Date {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return new Date();
+    return d;
+  } catch {
+    return new Date();
+  }
 }
 
 function statusConfig(status: string) {
@@ -127,7 +140,7 @@ function ComplaintCard({ complaint, index }: { complaint: Complaint; index: numb
             <div className="rounded-lg bg-white/5 px-3 py-2">
               <p className="text-muted-foreground mb-0.5">Submitted</p>
               <p className="text-white font-medium">
-                {format(new Date(complaint.createdAt), "MMM d, h:mm a")}
+                {format(safeDate(complaint.createdAt), "MMM d, h:mm a")}
               </p>
             </div>
           </div>
@@ -194,8 +207,8 @@ export default function MyComplaints() {
     .toUpperCase();
 
   useEffect(() => {
-    setComplaints(getComplaints());
-  }, []);
+    setComplaints(getMyComplaints(user.email));
+  }, [user.email]);
 
   function handleLogout() {
     localStorage.removeItem("nsUser");

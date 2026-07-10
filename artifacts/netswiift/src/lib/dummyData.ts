@@ -85,6 +85,7 @@ export const DUMMY_COMPLAINT = {
   message: "I paid for 2GB but nothing was credited to my line. Please help.",
   status: "Submitted",
   acceptedBy: null,
+  userEmail: "",   // seed complaint is visible to any user (no owner)
   createdAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
 };
 
