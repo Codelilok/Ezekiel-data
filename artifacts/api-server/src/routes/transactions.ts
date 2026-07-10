@@ -1,21 +1,23 @@
 import { Router, type IRouter } from "express";
-import { desc } from "drizzle-orm";
-import { db, transactionsTable } from "@workspace/db";
-import { ListTransactionsQueryParams } from "@workspace/api-zod";
+import { datamartFetch } from "../lib/datamart";
+import { mapTransaction, unwrap, type DatamartTransaction } from "../lib/mapper";
 
 const router: IRouter = Router();
 
+// List transactions — proxies GET /api/store/v1/wallet/transactions
 router.get("/transactions", async (req, res): Promise<void> => {
-  const parsed = ListTransactionsQueryParams.safeParse(req.query);
-  const limit = parsed.success ? (parsed.data.limit ?? 20) : 20;
+  try {
+    const { page = "1", limit = "20", type } = req.query as Record<string, string | undefined>;
+    const params = new URLSearchParams({ page, limit });
+    if (type) params.set("type", type);
 
-  const transactions = await db
-    .select()
-    .from(transactionsTable)
-    .orderBy(desc(transactionsTable.createdAt))
-    .limit(limit);
-
-  res.json(transactions);
+    const raw = await datamartFetch(`/api/store/v1/wallet/transactions?${params.toString()}`);
+    const transactions = unwrap<DatamartTransaction>(raw).map(mapTransaction);
+    res.json(transactions);
+  } catch (err: unknown) {
+    const e = err as { status?: number; body?: unknown; message?: string };
+    res.status(e.status ?? 500).json({ error: e.body ?? e.message ?? "Failed to fetch transactions" });
+  }
 });
 
 export default router;

@@ -1,125 +1,83 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, or, sql } from "drizzle-orm";
-import { db, ordersTable, transactionsTable, walletTable } from "@workspace/db";
-import {
-  CreateOrderBody,
-  ListOrdersQueryParams,
-  TrackOrderQueryParams,
-  GetOrderParams,
-} from "@workspace/api-zod";
+import { datamartFetch } from "../lib/datamart";
+import { mapOrder, unwrap, unwrapOne, type DatamartOrder } from "../lib/mapper";
 
 const router: IRouter = Router();
 
+// List orders — proxies GET /api/store/v1/orders, returns mapped array
 router.get("/orders", async (req, res): Promise<void> => {
-  const parsed = ListOrdersQueryParams.safeParse(req.query);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
+  try {
+    const { status, from, page, limit } = req.query as Record<string, string | undefined>;
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    if (from) params.set("from", from);
+    params.set("page", page ?? "1");
+    params.set("limit", limit ?? "20");
+
+    const raw = await datamartFetch(`/api/store/v1/orders?${params.toString()}`);
+    const orders = unwrap<DatamartOrder>(raw).map(mapOrder);
+    res.json(orders);
+  } catch (err: unknown) {
+    const e = err as { status?: number; body?: unknown; message?: string };
+    res.status(e.status ?? 500).json({ error: e.body ?? e.message ?? "Failed to fetch orders" });
   }
-
-  const { limit = 20, network, status } = parsed.data;
-
-  let query = db
-    .select()
-    .from(ordersTable)
-    .orderBy(desc(ordersTable.createdAt))
-    .$dynamic();
-
-  const conditions = [];
-  if (network) conditions.push(eq(ordersTable.network, network));
-  if (status) conditions.push(eq(ordersTable.status, status));
-
-  if (conditions.length > 0) {
-    for (const cond of conditions) {
-      query = query.where(cond) as typeof query;
-    }
-  }
-
-  const orders = await query.limit(limit);
-  res.json(orders);
 });
 
+// Create order — proxies POST /api/store/v1/orders
 router.post("/orders", async (req, res): Promise<void> => {
-  const parsed = CreateOrderBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-
-  const orderId =
-    "NS-" +
-    Math.random().toString(36).substring(2, 10).toUpperCase();
-
-  const statuses = ["pending", "completed", "completed", "completed"];
-  const status = statuses[Math.floor(Math.random() * statuses.length)];
-
-  const [order] = await db
-    .insert(ordersTable)
-    .values({ ...parsed.data, orderId, status })
-    .returning();
-
-  await db
-    .insert(transactionsTable)
-    .values({
-      type: "debit",
-      amount: parsed.data.price,
-      description: `${parsed.data.bundleSize} data for ${parsed.data.phone} (${parsed.data.network})`,
-      reference: orderId,
+  try {
+    const raw = await datamartFetch("/api/store/v1/orders", {
+      method: "POST",
+      body: JSON.stringify(req.body),
     });
-
-  req.log.info({ orderId }, "Order created");
-  res.status(201).json(order);
+    const order = unwrapOne<DatamartOrder>(raw);
+    req.log.info("Order created via Datamart");
+    res.status(201).json(order ? mapOrder(order) : raw);
+  } catch (err: unknown) {
+    const e = err as { status?: number; body?: unknown; message?: string };
+    res.status(e.status ?? 500).json({ error: e.body ?? e.message ?? "Failed to create order" });
+  }
 });
 
+// Track order — look up by reference via GET /api/store/v1/orders/:reference
 router.get("/orders/track", async (req, res): Promise<void> => {
-  const parsed = TrackOrderQueryParams.safeParse(req.query);
-  if (!parsed.success) {
+  const q = req.query["q"] as string | undefined;
+  if (!q) {
     res.status(400).json({ error: "Query parameter 'q' is required" });
     return;
   }
 
-  const { q } = parsed.data;
-
-  const [order] = await db
-    .select()
-    .from(ordersTable)
-    .where(
-      or(
-        eq(ordersTable.orderId, q),
-        eq(ordersTable.phone, q)
-      )
-    )
-    .limit(1);
-
-  if (!order) {
-    res.status(404).json({
-      error: "No order found matching this ID or phone number. Please check and try again.",
-    });
-    return;
+  try {
+    const raw = await datamartFetch(`/api/store/v1/orders/${encodeURIComponent(q)}`);
+    const order = unwrapOne<DatamartOrder>(raw);
+    res.json(order ? mapOrder(order) : raw);
+  } catch (err: unknown) {
+    const e = err as { status?: number; body?: unknown; message?: string };
+    if (e.status === 404) {
+      res.status(404).json({
+        error: "No order found matching this ID or phone number. Please check and try again.",
+      });
+      return;
+    }
+    res.status(e.status ?? 500).json({ error: e.body ?? e.message ?? "Failed to track order" });
   }
-
-  res.json(order);
 });
 
-router.get("/orders/:id", async (req, res): Promise<void> => {
-  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const params = GetOrderParams.safeParse({ id: parseInt(raw, 10) });
-  if (!params.success) {
-    res.status(400).json({ error: params.error.message });
-    return;
+// Get single order by reference — proxies GET /api/store/v1/orders/:reference
+router.get("/orders/:reference", async (req, res): Promise<void> => {
+  const { reference } = req.params;
+  try {
+    const raw = await datamartFetch(`/api/store/v1/orders/${encodeURIComponent(reference)}`);
+    const order = unwrapOne<DatamartOrder>(raw);
+    res.json(order ? mapOrder(order) : raw);
+  } catch (err: unknown) {
+    const e = err as { status?: number; body?: unknown; message?: string };
+    if (e.status === 404) {
+      res.status(404).json({ error: "Order not found" });
+      return;
+    }
+    res.status(e.status ?? 500).json({ error: e.body ?? e.message ?? "Failed to fetch order" });
   }
-
-  const [order] = await db
-    .select()
-    .from(ordersTable)
-    .where(eq(ordersTable.id, params.data.id));
-
-  if (!order) {
-    res.status(404).json({ error: "Order not found" });
-    return;
-  }
-
-  res.json(order);
 });
 
 export default router;

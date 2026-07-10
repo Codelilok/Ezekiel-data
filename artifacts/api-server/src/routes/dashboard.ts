@@ -1,46 +1,78 @@
 import { Router, type IRouter } from "express";
-import { sql, and, gte } from "drizzle-orm";
-import { db, ordersTable, walletTable } from "@workspace/db";
+import { datamartFetch } from "../lib/datamart";
 
 const router: IRouter = Router();
 
+interface WalletResponse {
+  status: string;
+  data: {
+    deposit?: { balance?: number };
+    earnings?: { availableBalance?: number };
+    balance?: number;
+  };
+}
+
+interface OrdersResponse {
+  status: string;
+  data?: OrderRecord[];
+  orders?: OrderRecord[];
+  total?: number;
+  pagination?: { total?: number };
+}
+
+interface OrderRecord {
+  status?: string;
+  capacity?: number;
+  gbAmount?: number;
+  gb_amount?: number;
+}
+
+// Dashboard stats — combines wallet balance + orders from Datamart
 router.get("/dashboard/stats", async (req, res): Promise<void> => {
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  try {
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
-  const [ordersToday] = await db
-    .select({ count: sql<number>`cast(count(*) as int)` })
-    .from(ordersTable)
-    .where(gte(ordersTable.createdAt, todayStart));
+    const [walletData, ordersData, ordersTodayData] = await Promise.all([
+      datamartFetch<WalletResponse>("/api/store/v1/wallet/balance"),
+      datamartFetch<OrdersResponse>("/api/store/v1/orders?page=1&limit=100"),
+      datamartFetch<OrdersResponse>(`/api/store/v1/orders?from=${today}&page=1&limit=100`),
+    ]);
 
-  const [gbToday] = await db
-    .select({ total: sql<number>`coalesce(sum(gb_amount), 0)` })
-    .from(ordersTable)
-    .where(gte(ordersTable.createdAt, todayStart));
+    // Wallet: { data: { deposit: { balance }, earnings: { availableBalance } } }
+    const depositBalance = walletData.data?.deposit?.balance ?? 0;
+    const earningsBalance = walletData.data?.earnings?.availableBalance ?? 0;
+    const walletBalance = Number((depositBalance + earningsBalance).toFixed(2));
 
-  const [allOrders] = await db
-    .select({ total: sql<number>`cast(count(*) as int)` })
-    .from(ordersTable);
+    // Normalise orders arrays
+    const allOrders: OrderRecord[] = ordersData.data ?? ordersData.orders ?? [];
+    const todayOrders: OrderRecord[] = ordersTodayData.data ?? ordersTodayData.orders ?? [];
 
-  const [completedOrders] = await db
-    .select({ count: sql<number>`cast(count(*) as int)` })
-    .from(ordersTable)
-    .where(sql`status = 'completed'`);
+    const totalOrders =
+      ordersData.pagination?.total ?? ordersData.total ?? allOrders.length;
 
-  const [wallet] = await db.select().from(walletTable).limit(1);
-  const balance = wallet?.balance ?? 500;
+    const completed = allOrders.filter((o) => o.status === "completed").length;
+    const successRate =
+      totalOrders > 0 ? Math.round((completed / totalOrders) * 100) : 100;
 
-  const totalOrders = allOrders?.total ?? 0;
-  const completed = completedOrders?.count ?? 0;
-  const successRate = totalOrders > 0 ? Math.round((completed / totalOrders) * 100) : 100;
+    // Datamart uses `capacity` (GB); fall back to gbAmount / gb_amount for compatibility
+    const gbSoldToday = todayOrders.reduce((sum, o) => {
+      const gb = o.capacity ?? o.gbAmount ?? o.gb_amount ?? 0;
+      return sum + Number(gb);
+    }, 0);
 
-  res.json({
-    walletBalance: balance,
-    ordersToday: ordersToday?.count ?? 0,
-    gbSoldToday: Number((gbToday?.total ?? 0).toFixed(2)),
-    successRate,
-    totalOrders,
-  });
+    res.json({
+      walletBalance,
+      ordersToday: todayOrders.length,
+      gbSoldToday: Number(gbSoldToday.toFixed(2)),
+      successRate,
+      totalOrders,
+    });
+  } catch (err: unknown) {
+    const e = err as { status?: number; body?: unknown; message?: string };
+    res
+      .status(e.status ?? 500)
+      .json({ error: e.body ?? e.message ?? "Failed to fetch dashboard stats" });
+  }
 });
 
 export default router;
