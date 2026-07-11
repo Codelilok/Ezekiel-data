@@ -6,7 +6,7 @@ import {
   Zap, LogOut, Home, Package, CreditCard, Menu,
   Bell, Wifi, ChevronRight, TrendingUp, ArrowUpRight,
   Plus, RefreshCw, ShieldCheck, Loader2, Check,
-  X, Wallet, Briefcase
+  X, Wallet, Briefcase, HeadphonesIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -182,6 +182,9 @@ export default function Agent() {
         <Link href="/transactions" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-muted-foreground hover:bg-white/5 hover:text-white transition-colors text-sm">
           <CreditCard className="w-4 h-4" />Transactions
         </Link>
+        <Link href="/support" className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-muted-foreground hover:bg-white/5 hover:text-white transition-colors text-sm">
+          <HeadphonesIcon className="w-4 h-4" />Support Inbox
+        </Link>
         <div className="pt-5 pb-2 px-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Quick Buy</div>
         {NETWORKS.map(net => (
           <Link key={net.id} href={`/${net.id}`} className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-muted-foreground hover:bg-white/5 hover:text-white transition-colors text-sm">
@@ -265,7 +268,7 @@ export default function Agent() {
               </div>
             </motion.div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {statsLoading ? (
                 Array(2).fill(0).map((_, i) => (
                   <Card key={i} className="border-white/5 bg-white/5"><CardContent className="p-4"><Skeleton className="h-16 w-full bg-white/10" /></CardContent></Card>

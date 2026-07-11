@@ -4,8 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LogOut, Users, Package, MessageSquare, Shield,
   Eye, EyeOff, UserCheck, Loader2, Check, RefreshCw,
-  UserCog, Briefcase, UserX, Ban
+  UserCog, Briefcase, UserX, Ban, HeadphonesIcon,
 } from "lucide-react";
+import SupportAdminPanel from "./SupportAdminPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,7 +20,7 @@ import { getLocalOrders } from "@/lib/dummyData";
 const ADMIN_EMAIL    = "codelilok@gmail.com";
 const ADMIN_PASSWORD = "NetSwift@26";
 
-type Tab = "orders" | "complaints" | "users" | "agents" | "admins" | "suspended" | "removed";
+type Tab = "orders" | "complaints" | "users" | "agents" | "admins" | "suspended" | "removed" | "support";
 
 function getComplaints() {
   try { return JSON.parse(localStorage.getItem("nsComplaints") ?? "[]"); } catch { return []; }
@@ -483,7 +484,7 @@ function OrdersTab() {
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                   <span>{order.network}</span><span>·</span>
                   <span className="font-bold text-white">{order.bundleSize}</span><span>·</span>
-                  <span>{order.phone?.substring(0, 3)}***{order.phone?.substring(order.phone?.length - 3)}</span>
+                  <span className="font-mono">{order.phone}</span>
                 </div>
               </div>
               <div className="flex flex-col items-end gap-1">
@@ -522,11 +523,13 @@ export default function Admin() {
     admins:    allUsers.filter(u => u.role === "admin" && (u.status === "active" || !u.status)).length,
     suspended: allUsers.filter(u => u.status === "suspended").length,
     removed:   allUsers.filter(u => u.status === "removed").length,
+    support:   (() => { try { const t: any[] = JSON.parse(localStorage.getItem("nsSupportTickets") ?? "[]"); return t.filter(x => x.status === "pending").length; } catch { return 0; } })(),
   };
 
   const TABS: { id: Tab; label: string; icon: React.ElementType; count?: number; activeColor?: string }[] = [
     { id: "orders",     label: "Orders",     icon: Package },
     { id: "complaints", label: "Complaints", icon: MessageSquare },
+    { id: "support",    label: "Support",    icon: HeadphonesIcon, count: counts.support, activeColor: counts.support > 0 ? "bg-teal-500/15 text-teal-300" : undefined },
     { id: "users",      label: "Users",      icon: Users,    count: counts.users },
     { id: "agents",     label: "Agents",     icon: Briefcase, count: counts.agents },
     { id: "admins",     label: "Admins",     icon: UserCog,  count: counts.admins },
@@ -574,6 +577,7 @@ export default function Admin() {
           <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
             {tab === "orders"     && <OrdersTab />}
             {tab === "complaints" && <ComplaintsTab />}
+            {tab === "support"    && <SupportAdminPanel viewer={{ email: ADMIN_EMAIL, name: "Admin", role: "admin" }} />}
             {tab === "users"      && <UsersTab />}
             {tab === "agents"     && <AgentsTab />}
             {tab === "admins"     && <AdminsTab />}

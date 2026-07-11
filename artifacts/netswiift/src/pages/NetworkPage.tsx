@@ -1,21 +1,21 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check, Loader2, Phone, Zap, CreditCard, Wallet } from "lucide-react";
+import { ArrowLeft, Check, Loader2, Phone, Zap, CreditCard, Wallet, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateOrder } from "@workspace/api-client-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const BUNDLES = [
-  { id: "1gb",  size: "1GB",  validity: "2 days",  price: "GHS 5",  priceValue: 5,  gbAmount: 1 },
-  { id: "2gb",  size: "2GB",  validity: "7 days",  price: "GHS 10", priceValue: 10, gbAmount: 2 },
-  { id: "5gb",  size: "5GB",  validity: "30 days", price: "GHS 25", priceValue: 25, gbAmount: 5 },
-  { id: "10gb", size: "10GB", validity: "30 days", price: "GHS 45", priceValue: 45, gbAmount: 10 },
-  { id: "20gb", size: "20GB", validity: "30 days", price: "GHS 80", priceValue: 80, gbAmount: 20 },
-];
+// Map frontend network slug → Datamart code for products API
+const NETWORK_TO_CODE: Record<string, string> = {
+  mtn: "mtn",
+  telecel: "telecel",
+  airteltigo: "airteltigo",
+};
 
 const THEME = {
   yellow: { dot:"bg-yellow-500", border:"border-yellow-500/40", ring:"ring-yellow-500/40", bg:"bg-yellow-500/10", text:"text-yellow-400", btn:"from-yellow-500 to-yellow-600", bar:"from-yellow-400 to-yellow-600", glow:"shadow-yellow-500/20" },
@@ -26,8 +26,94 @@ const THEME = {
 type ColorTheme = keyof typeof THEME;
 type PayMethod = "wallet" | "paystack";
 
+interface Bundle {
+  id: string;
+  size: string;
+  validity: string;
+  price: string;
+  priceValue: number;
+  gbAmount: number;
+}
+
 function getWalletBalance(): number {
   try { return JSON.parse(localStorage.getItem("nsWallet") ?? "{}").balance ?? 0; } catch { return 0; }
+}
+
+function getCurrentUser(): { name: string; email: string; phone?: string } | null {
+  try {
+    const raw = localStorage.getItem("nsUser");
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function saveOrderLocally(order: Record<string, unknown>) {
+  try {
+    const existing = JSON.parse(localStorage.getItem("nsOrders") ?? "[]");
+    // Avoid duplicates by orderId
+    const alreadyExists = existing.some((o: any) => o.orderId === order.orderId);
+    if (!alreadyExists) {
+      existing.unshift(order);
+      localStorage.setItem("nsOrders", JSON.stringify(existing));
+    }
+  } catch {}
+}
+
+// Fallback bundles (used when API is unavailable)
+const FALLBACK_BUNDLES: Bundle[] = [
+  { id: "1gb",  size: "1GB",  validity: "2 days",  price: "GHS 5",  priceValue: 5,  gbAmount: 1 },
+  { id: "2gb",  size: "2GB",  validity: "7 days",  price: "GHS 10", priceValue: 10, gbAmount: 2 },
+  { id: "5gb",  size: "5GB",  validity: "30 days", price: "GHS 25", priceValue: 25, gbAmount: 5 },
+  { id: "10gb", size: "10GB", validity: "30 days", price: "GHS 45", priceValue: 45, gbAmount: 10 },
+  { id: "20gb", size: "20GB", validity: "30 days", price: "GHS 80", priceValue: 80, gbAmount: 20 },
+];
+
+function useProducts(network: string) {
+  const [bundles, setBundles] = useState<Bundle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const fetchProducts = async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const res = await fetch(`${base}/api/products?network=${NETWORK_TO_CODE[network] ?? network}`);
+      if (!res.ok) throw new Error("Failed");
+      const json = await res.json();
+      const raw: any[] = Array.isArray(json?.data) ? json.data : [];
+      if (raw.length === 0) {
+        setBundles(FALLBACK_BUNDLES);
+        return;
+      }
+      const mapped: Bundle[] = raw.map((p) => {
+        const gb = p.capacity;
+        const price = p.sellingPrice;
+        const validity = p.validityUnit
+          ? `${p.validity} ${p.validityUnit}`
+          : p.validity
+          ? `${p.validity} days`
+          : "30 days";
+        return {
+          id: String(p.id),
+          size: `${gb}GB`,
+          validity,
+          price: `GHS ${price.toFixed(2)}`,
+          priceValue: price,
+          gbAmount: gb,
+        };
+      });
+      setBundles(mapped);
+    } catch {
+      setError(true);
+      setBundles(FALLBACK_BUNDLES);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchProducts(); }, [network]);
+
+  return { bundles, loading, error, retry: fetchProducts };
 }
 
 export default function NetworkPage({ network, name, colorTheme }: { network: string; name: string; colorTheme: ColorTheme }) {
@@ -38,9 +124,10 @@ export default function NetworkPage({ network, name, colorTheme }: { network: st
   const [payMethod, setPayMethod] = useState<PayMethod>("paystack");
   const [orderId, setOrderId] = useState("");
 
+  const { bundles, loading: productsLoading, error: productsError, retry } = useProducts(network);
   const createOrderMutation = useCreateOrder();
   const t = THEME[colorTheme];
-  const selectedBundle = BUNDLES.find((b) => b.id === bundle);
+  const selectedBundle = bundles.find((b) => b.id === bundle);
   const walletBalance = useMemo(() => getWalletBalance(), [step]);
 
   function goBack() {
@@ -60,13 +147,34 @@ export default function NetworkPage({ network, name, colorTheme }: { network: st
     }
     if (payMethod === "wallet") {
       const current = getWalletBalance();
-      const updated = { balance: Math.max(0, current - selectedBundle.priceValue) };
-      localStorage.setItem("nsWallet", JSON.stringify(updated));
+      localStorage.setItem("nsWallet", JSON.stringify({ balance: Math.max(0, current - selectedBundle.priceValue) }));
     }
+
+    const currentUser = getCurrentUser();
+    const customerName = currentUser?.name ?? "Customer";
+
     createOrderMutation.mutate(
       { data: { network: name, bundleSize: selectedBundle.size, bundleValidity: selectedBundle.validity, phone, gbAmount: selectedBundle.gbAmount, price: selectedBundle.priceValue } },
       {
-        onSuccess: (data) => { setOrderId(data.orderId); setStep(4); },
+        onSuccess: (data) => {
+          const oid = data.orderId;
+          setOrderId(oid);
+          setStep(4);
+          // Persist locally with full phone + customer name so admin can see unmasked data
+          saveOrderLocally({
+            id: Date.now(),
+            orderId: oid,
+            network: name,
+            bundleSize: selectedBundle.size,
+            bundleValidity: selectedBundle.validity,
+            phone,
+            status: "Pending",
+            gbAmount: selectedBundle.gbAmount,
+            price: selectedBundle.priceValue,
+            customerName,
+            createdAt: new Date().toISOString(),
+          });
+        },
         onError: () => toast.error("Payment failed. Please try again."),
       }
     );
@@ -102,26 +210,46 @@ export default function NetworkPage({ network, name, colorTheme }: { network: st
               <motion.div key="step1" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} className="space-y-5">
                 <div className="text-center space-y-1 mb-6">
                   <h2 className="text-xl font-bold text-white">Select a Bundle</h2>
-                  <p className="text-sm text-muted-foreground">Tap a bundle to continue</p>
+                  <p className="text-sm text-muted-foreground">Live prices · Tap a bundle to continue</p>
+                  {productsError && (
+                    <p className="text-xs text-amber-400">Using fallback prices. <button onClick={retry} className="underline">Retry</button></p>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {BUNDLES.map((b) => (
-                    <motion.button key={b.id} whileTap={{ scale: 0.96 }}
-                      onClick={() => { setBundle(b.id); setTimeout(() => setStep(2), 180); }}
-                      className={`relative flex flex-col items-start p-4 rounded-2xl border-2 transition-all text-left overflow-hidden
-                        ${bundle === b.id ? `${t.border} ${t.bg} ring-2 ${t.ring}` : "border-white/8 bg-black/25 hover:border-white/20 hover:bg-white/5"}`}
-                    >
-                      <div className={`absolute -top-4 -right-4 w-16 h-16 ${t.dot} rounded-full blur-2xl opacity-20`} />
-                      <p className="text-3xl font-extrabold text-white tracking-tight leading-none mb-1">{b.size}</p>
-                      <p className={`text-base font-bold ${t.text}`}>{b.price}</p>
-                      {bundle === b.id && (
-                        <motion.div layoutId="bundleCheck" className={`absolute top-2 right-2 w-5 h-5 rounded-full ${t.dot} flex items-center justify-center`}>
-                          <Check className="w-3 h-3 text-white" />
-                        </motion.div>
-                      )}
-                    </motion.button>
-                  ))}
-                </div>
+
+                {productsLoading ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {Array(5).fill(0).map((_, i) => (
+                      <Skeleton key={i} className="h-24 rounded-2xl bg-white/5" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {bundles.map((b) => (
+                      <motion.button key={b.id} whileTap={{ scale: 0.96 }}
+                        onClick={() => { setBundle(b.id); setTimeout(() => setStep(2), 180); }}
+                        className={`relative flex flex-col items-start p-4 rounded-2xl border-2 transition-all text-left overflow-hidden
+                          ${bundle === b.id ? `${t.border} ${t.bg} ring-2 ${t.ring}` : "border-white/8 bg-black/25 hover:border-white/20 hover:bg-white/5"}`}
+                      >
+                        <div className={`absolute -top-4 -right-4 w-16 h-16 ${t.dot} rounded-full blur-2xl opacity-20`} />
+                        <p className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-none mb-1">{b.size}</p>
+                        <p className={`text-sm font-bold ${t.text}`}>{b.price}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 truncate w-full">{b.validity}</p>
+                        {bundle === b.id && (
+                          <motion.div layoutId="bundleCheck" className={`absolute top-2 right-2 w-5 h-5 rounded-full ${t.dot} flex items-center justify-center`}>
+                            <Check className="w-3 h-3 text-white" />
+                          </motion.div>
+                        )}
+                      </motion.button>
+                    ))}
+                    {/* Retry button inside grid */}
+                    {productsError && (
+                      <button onClick={retry} className="flex flex-col items-center justify-center p-4 rounded-2xl border-2 border-white/8 bg-black/25 hover:bg-white/5 transition-all gap-2">
+                        <RefreshCw className="w-5 h-5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">Retry</span>
+                      </button>
+                    )}
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -179,7 +307,6 @@ export default function NetworkPage({ network, name, colorTheme }: { network: st
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">Payment Method</p>
 
-                  {/* NetSwift Wallet */}
                   <motion.button whileTap={{ scale: 0.98 }} onClick={() => setPayMethod("wallet")}
                     className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left
                       ${payMethod === "wallet" ? "border-teal-500/50 bg-teal-500/10 ring-2 ring-teal-500/20" : "border-white/10 bg-black/20 hover:border-white/20"}`}
@@ -194,7 +321,6 @@ export default function NetworkPage({ network, name, colorTheme }: { network: st
                     {payMethod === "wallet" && <div className="w-5 h-5 rounded-full bg-teal-500 flex items-center justify-center shrink-0"><Check className="w-3 h-3 text-white" /></div>}
                   </motion.button>
 
-                  {/* Paystack */}
                   <motion.button whileTap={{ scale: 0.98 }} onClick={() => setPayMethod("paystack")}
                     className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left
                       ${payMethod === "paystack" ? "border-blue-500/50 bg-blue-500/10 ring-2 ring-blue-500/20" : "border-white/10 bg-black/20 hover:border-white/20"}`}

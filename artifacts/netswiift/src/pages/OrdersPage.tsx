@@ -48,17 +48,21 @@ function generateTrackingId() {
   return `TRK-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
 }
 
-function getCurrentUserEmail(): string {
+function getCurrentUser(): { email: string; name: string } {
   try {
     const raw = localStorage.getItem("nsUser");
-    if (raw) return (JSON.parse(raw) as { email?: string }).email ?? "";
+    if (raw) {
+      const u = JSON.parse(raw) as { email?: string; name?: string };
+      return { email: u.email ?? "", name: u.name ?? "" };
+    }
   } catch {}
-  return "";
+  return { email: "", name: "" };
 }
 
 function saveComplaint(complaint: Record<string, unknown>) {
   const existing = JSON.parse(localStorage.getItem("nsComplaints") ?? "[]");
-  existing.push({ ...complaint, userEmail: getCurrentUserEmail() });
+  const { email, name } = getCurrentUser();
+  existing.push({ ...complaint, userEmail: email, customerName: name });
   localStorage.setItem("nsComplaints", JSON.stringify(existing));
 }
 

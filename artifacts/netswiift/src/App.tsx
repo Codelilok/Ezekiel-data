@@ -15,6 +15,8 @@ import BulkOrders from "@/pages/BulkOrders";
 import Admin from "@/pages/Admin";
 import Agent from "@/pages/Agent";
 import Blocked from "@/pages/Blocked";
+import SupportAgentPage from "@/pages/SupportAgentPage";
+import SupportWidget from "@/components/support/SupportWidget";
 import { seedDummyData } from "@/lib/dummyData";
 
 seedDummyData();
@@ -35,6 +37,7 @@ function Router() {
       <Route path="/profile" component={Profile} />
       <Route path="/bulk-orders" component={BulkOrders} />
       <Route path="/complaints" component={MyComplaints} />
+      <Route path="/support" component={SupportAgentPage} />
       <Route path="/admin" component={Admin} />
       <Route path="/agent" component={Agent} />
       <Route path="/blocked" component={Blocked} />
@@ -49,6 +52,7 @@ function App() {
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <Router />
+          <SupportWidget />
         </WouterRouter>
         <Toaster />
         <SonnerToaster position="top-center" theme="dark" richColors closeButton offset={72} toastOptions={{ style: { zIndex: 9999 } }} />

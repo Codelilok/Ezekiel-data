@@ -323,7 +323,7 @@ export default function Dashboard() {
               </motion.div>
             )}
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {statsLoading ? (
                 Array(2).fill(0).map((_, i) => (
                   <Card key={i} className="border-white/5 bg-white/5"><CardContent className="p-4"><Skeleton className="h-16 w-full bg-white/10" /></CardContent></Card>

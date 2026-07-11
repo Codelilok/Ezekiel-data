@@ -1,0 +1,3 @@
+- [Support System Architecture](support-system.md) — full chat/ticket system lives in localStorage; polls every 2s for real-time feel; no server changes needed.
+- [Products API](products-api.md) — GET /api/products?network=mtn|telecel|airteltigo maps to Datamart YELLO/TELECEL/AT_PREMIUM; returns sellingPrice as live price.
+- [Order/Support Phone Handling](phone-handling.md) — nsOrders always stores full phone; Datamart API orders may be masked but we never add extra masking on top.

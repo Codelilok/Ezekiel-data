@@ -9,6 +9,7 @@ export const DUMMY_ORDERS = [
     status: "Completed",
     gbAmount: 5,
     price: 25,
+    customerName: "Demo User",
     createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
   },
   {
@@ -21,6 +22,7 @@ export const DUMMY_ORDERS = [
     status: "Pending",
     gbAmount: 2,
     price: 10,
+    customerName: "Demo User",
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
   },
   {
@@ -33,6 +35,7 @@ export const DUMMY_ORDERS = [
     status: "Completed",
     gbAmount: 10,
     price: 45,
+    customerName: "Demo User",
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
   },
   {
@@ -45,6 +48,7 @@ export const DUMMY_ORDERS = [
     status: "Failed",
     gbAmount: 1,
     price: 5,
+    customerName: "Demo User",
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
   },
   {
@@ -57,6 +61,7 @@ export const DUMMY_ORDERS = [
     status: "Completed",
     gbAmount: 20,
     price: 80,
+    customerName: "Demo User",
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
   },
   {
@@ -69,6 +74,7 @@ export const DUMMY_ORDERS = [
     status: "Pending",
     gbAmount: 5,
     price: 25,
+    customerName: "Demo User",
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 26).toISOString(),
   },
 ];
@@ -86,6 +92,7 @@ export const DUMMY_COMPLAINT = {
   status: "Submitted",
   acceptedBy: null,
   userEmail: "",   // seed complaint is visible to any user (no owner)
+  customerName: "Demo User",
   createdAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
 };
 
