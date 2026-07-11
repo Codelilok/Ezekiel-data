@@ -6,6 +6,7 @@ import {
   getSupportSettings,
   getActiveTicketForCustomer,
   createTicket,
+  updateTicket,
   getMessages,
   addMessage,
   type SupportTicket,
@@ -30,7 +31,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   reopened:    { label: "Reopened",          color: "text-amber-400" },
 };
 
-function OrderSelector({ onSelect, onClose }: { onSelect: (o: any) => void; onClose: () => void }) {
+function OrderSelector({ onSelect, onClose }: { onSelect: (o: any) => void; onClose: () => void; }) {
   const orders = getLocalOrders();
   const NET_COLOR: Record<string, string> = { MTN: "bg-yellow-500", Telecel: "bg-red-500", AirtelTigo: "bg-blue-500" };
   return (
@@ -106,6 +107,41 @@ export default function CustomerChatPanel({ customer, settings, onClose }: Custo
     reader.onload = (ev) => setImageBase64(ev.target?.result as string);
     reader.readAsDataURL(file);
     e.target.value = "";
+  }
+
+  // Auto-send called when customer taps an order in the picker
+  function handleSendOrder(order: any) {
+    setSending(true);
+    let t = ticket;
+
+    if (!t) {
+      t = createTicket({
+        customerEmail: customer.email,
+        customerName: customer.name,
+        customerPhone: customer.phone ?? "",
+        orderId: order.orderId,
+        orderData: order,
+      });
+      setTicket(t);
+      setPhase("chat");
+    } else if (!t.orderId) {
+      // Attach order to existing open ticket
+      updateTicket(t.id, { orderId: order.orderId, orderData: order });
+    }
+
+    addMessage({
+      ticketId: t.id,
+      senderEmail: customer.email,
+      senderName: customer.name,
+      senderRole: "customer",
+      content: `I need help with my order: ${order.orderId} · ${order.network} ${order.bundleSize}`,
+      imageBase64: null,
+    });
+
+    setSelectedOrder(null);
+    setShowOrderPicker(false);
+    setSending(false);
+    refresh();
   }
 
   async function handleSend(e?: React.FormEvent) {
@@ -290,7 +326,7 @@ export default function CustomerChatPanel({ customer, settings, onClose }: Custo
           <div className="shrink-0 border-t border-white/5 px-3 py-3 space-y-2 relative">
             {showOrderPicker && (
               <OrderSelector
-                onSelect={(o) => { setSelectedOrder(o); setShowOrderPicker(false); }}
+                onSelect={(o) => { handleSendOrder(o); }}
                 onClose={() => setShowOrderPicker(false)}
               />
             )}

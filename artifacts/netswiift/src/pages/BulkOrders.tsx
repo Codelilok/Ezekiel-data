@@ -122,7 +122,7 @@ export default function BulkOrders() {
               {entries.length > 0 && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
                   {/* Summary */}
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap gap-3 items-center">
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-sm">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                       <span className="text-emerald-300 font-medium">{valid.length} valid</span>
@@ -134,7 +134,7 @@ export default function BulkOrders() {
                       </div>
                     )}
                     {valid.length > 0 && (
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-sm ml-auto">
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-sm sm:ml-auto">
                         <span className="text-muted-foreground">Total:</span>
                         <span className="text-teal-300 font-bold">GHS {total}</span>
                       </div>

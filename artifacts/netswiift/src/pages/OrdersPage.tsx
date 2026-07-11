@@ -250,11 +250,11 @@ function OrderCard({ order, index }: { order: any; index: number }) {
               className="overflow-hidden"
             >
               <div className="px-4 pb-4 border-t border-white/5 pt-3 space-y-3">
-                <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                   {[
                     { k: "Network", v: order.network },
                     { k: "Bundle",  v: order.bundleSize },
-                    { k: "Phone",   v: `${order.phone?.substring(0, 3)}***${order.phone?.substring(order.phone?.length - 3)}` },
+                    { k: "Phone",   v: order.phone },
                     { k: "Date",    v: format(new Date(order.createdAt), "MMM d, yyyy") },
                   ].map(row => (
                     <div key={row.k}>
@@ -320,11 +320,11 @@ export default function OrdersPage() {
 
       <main className="container mx-auto px-4 py-6 max-w-2xl space-y-5">
         <Tabs defaultValue="all" onValueChange={setFilter} className="w-full">
-          <TabsList className="bg-white/5 border border-white/10 h-10 w-full grid grid-cols-4">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="pending">Pending</TabsTrigger>
-            <TabsTrigger value="completed">Completed</TabsTrigger>
-            <TabsTrigger value="failed">Failed</TabsTrigger>
+          <TabsList className="bg-white/5 border border-white/10 h-10 w-full flex">
+            <TabsTrigger value="all" className="flex-1">All</TabsTrigger>
+            <TabsTrigger value="pending" className="flex-1">Pending</TabsTrigger>
+            <TabsTrigger value="completed" className="flex-1 text-xs sm:text-sm">Completed</TabsTrigger>
+            <TabsTrigger value="failed" className="flex-1">Failed</TabsTrigger>
           </TabsList>
         </Tabs>
 

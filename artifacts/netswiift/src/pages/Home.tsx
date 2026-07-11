@@ -419,12 +419,12 @@ function BuyDataSection() {
             />
           </div>
 
-          <CardContent className="p-8 lg:p-12 min-h-[400px] flex flex-col justify-center">
+          <CardContent className="p-4 sm:p-8 lg:p-12 min-h-[400px] flex flex-col justify-center">
             <AnimatePresence mode="wait">
               {step === 1 && (
                 <motion.div key="step1" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6">
                   <h3 className="text-xl font-semibold text-center mb-8">Select Network</h3>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     {NETWORKS.map(net => (
                       <button
                         key={net.id}
@@ -534,7 +534,7 @@ function BuyDataSection() {
                   <h3 className="text-3xl font-bold text-white">Order Received</h3>
                   <p className="text-muted-foreground">Your transaction is being processed.</p>
                   
-                  <div className="inline-block bg-black/20 rounded-xl p-4 border border-white/5 text-left min-w-[280px]">
+                  <div className="w-full max-w-xs mx-auto bg-black/20 rounded-xl p-4 border border-white/5 text-left">
                     <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Order ID</div>
                     <div className="font-mono text-lg text-white mb-4">{orderId}</div>
                     <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Status</div>

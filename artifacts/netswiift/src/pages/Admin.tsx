@@ -187,17 +187,19 @@ function UserCard({ u, actions }: { u: any; actions: React.ReactNode }) {
   };
   const initials = u.name?.split(" ").map((p: string) => p[0]).join("").slice(0, 2).toUpperCase() ?? "?";
   return (
-    <div className="bg-black/25 border border-white/8 rounded-2xl p-4 flex items-center gap-3">
-      <Avatar className="h-10 w-10 border border-white/10 shrink-0">
-        <AvatarFallback className="bg-gradient-to-br from-teal-500/20 to-purple-600/20 text-teal-400 text-sm font-bold">{initials}</AvatarFallback>
-      </Avatar>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-white truncate">{u.name}</p>
-        <p className="text-xs text-muted-foreground truncate">{u.email}</p>
-        {u.joinedAt && <p className="text-[11px] text-muted-foreground/50 mt-0.5">Joined {format(new Date(u.joinedAt), "MMM d, yyyy")}</p>}
+    <div className="bg-black/25 border border-white/8 rounded-2xl p-4 flex flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <Avatar className="h-10 w-10 border border-white/10 shrink-0">
+          <AvatarFallback className="bg-gradient-to-br from-teal-500/20 to-purple-600/20 text-teal-400 text-sm font-bold">{initials}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-white truncate">{u.name}</p>
+          <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+          {u.joinedAt && <p className="text-[11px] text-muted-foreground/50 mt-0.5">Joined {format(new Date(u.joinedAt), "MMM d, yyyy")}</p>}
+        </div>
+        <Badge className={`text-xs border shrink-0 ${roleCls(u.role ?? "user")}`}>{u.role ?? "user"}</Badge>
       </div>
-      <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-        <Badge className={`text-xs border ${roleCls(u.role ?? "user")}`}>{u.role ?? "user"}</Badge>
+      <div className="flex items-center gap-2 flex-wrap">
         {actions}
       </div>
     </div>

@@ -1,19 +1,16 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { MessageCircle, X } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getSupportSettings } from "@/lib/supportStore";
 import CustomerChatPanel from "./CustomerChatPanel";
 
 function getLoggedInCustomer(): { name: string; email: string; phone?: string } | null {
   try {
-    // Not admin, not agent-only — a regular user
     const admin = localStorage.getItem("nsAdmin");
-    if (admin) return null; // admin is viewing, don't show widget
+    if (admin) return null;
     const raw = localStorage.getItem("nsUser");
     if (!raw) return null;
     const user = JSON.parse(raw) as { name: string; email: string; phone?: string; role?: string };
-    // Agents also get the widget (they might be customers too), but only plain users
-    // If the user has role agent/admin in nsUsers, skip the widget
     const users: any[] = JSON.parse(localStorage.getItem("nsUsers") ?? "[]");
     const found = users.find((u: any) => u.email?.toLowerCase() === user.email?.toLowerCase());
     if (found && (found.role === "agent" || found.role === "admin")) return null;
@@ -29,14 +26,13 @@ export default function SupportWidget() {
   const [showBubble, setShowBubble] = useState(false);
   const [customer, setCustomer] = useState(() => getLoggedInCustomer());
 
-  // Position state
-  const [pos, setPos] = useState({ x: -1, y: -1 }); // -1 = unset (snap to default)
+  // Position state — fixed bottom-right by default
+  const [pos, setPos] = useState({ x: -1, y: -1 });
   const dragging = useRef(false);
   const moved = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
   const btnRef = useRef<HTMLDivElement>(null);
 
-  // Reload settings and customer on focus (tab switch)
   useEffect(() => {
     const refresh = () => {
       setSettings(getSupportSettings());
@@ -47,22 +43,22 @@ export default function SupportWidget() {
     return () => { window.removeEventListener("focus", refresh); clearInterval(id); };
   }, []);
 
-  // Show floating bubble after delay (once)
+  // Show floating bubble once after delay, auto-dismiss
   useEffect(() => {
-    if (!settings.floatingMessageEnabled || !settings.widgetEnabled) return;
+    if (!settings.floatingMessageEnabled || !settings.widgetEnabled || open) return;
     const t = setTimeout(() => setShowBubble(true), 1800);
     const t2 = setTimeout(() => setShowBubble(false), 8000);
     return () => { clearTimeout(t); clearTimeout(t2); };
-  }, [settings.floatingMessageEnabled, settings.widgetEnabled]);
+  }, [settings.floatingMessageEnabled, settings.widgetEnabled, open]);
 
-  // Pointer drag handlers
+  // Hide bubble when chat opens
+  useEffect(() => { if (open) setShowBubble(false); }, [open]);
+
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     dragging.current = true;
     moved.current = false;
     const rect = btnRef.current?.getBoundingClientRect();
-    if (rect) {
-      offset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    }
+    if (rect) offset.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     e.preventDefault();
   }, []);
@@ -77,11 +73,10 @@ export default function SupportWidget() {
   }, []);
 
   const onPointerUp = useCallback((e: React.PointerEvent) => {
+    const wasDrag = moved.current;
     dragging.current = false;
-    if (!moved.current) {
-      // It was a tap, open/close chat
-      if (customer) setOpen((o) => !o);
-    }
+    moved.current = false;
+    if (!wasDrag && customer) setOpen((o) => !o);
     e.preventDefault();
   }, [customer]);
 
@@ -102,43 +97,29 @@ export default function SupportWidget() {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
       >
-        {/* Speech bubble */}
+        {/* Speech bubble — no close button, tapping it opens chat */}
         <AnimatePresence>
           {showBubble && !open && settings.floatingMessageEnabled && (
             <motion.div
               initial={{ opacity: 0, scale: 0.8, y: 4 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.8, y: 4 }}
-              className="absolute bottom-[72px] right-0 w-52 bg-white text-gray-900 text-xs rounded-2xl rounded-br-sm shadow-2xl px-3 py-2.5 leading-snug select-none"
+              className="absolute bottom-[72px] right-0 w-52 bg-white text-gray-900 text-xs rounded-2xl rounded-br-sm shadow-2xl px-3 py-2.5 leading-snug select-none cursor-pointer"
             >
               {settings.floatingMessage}
-              <button
-                className="absolute top-1 right-1.5 text-gray-400 hover:text-gray-600 leading-none"
-                onPointerUp={(e) => { e.stopPropagation(); setShowBubble(false); }}
-              >
-                <X className="w-3 h-3" />
-              </button>
+              {/* Arrow */}
+              <span className="absolute -bottom-2 right-4 w-0 h-0 border-l-8 border-l-transparent border-r-8 border-r-transparent border-t-8 border-t-white" />
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Widget button */}
+        {/* Widget button — always shows chat icon */}
         <motion.div
           whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.94 }}
+          whileTap={{ scale: 0.92 }}
           className="w-14 h-14 rounded-full bg-gradient-to-br from-teal-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-teal-500/40 cursor-pointer select-none"
         >
-          <AnimatePresence mode="wait">
-            {open ? (
-              <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }}>
-                <X className="w-6 h-6 text-white" />
-              </motion.div>
-            ) : (
-              <motion.div key="chat" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }}>
-                <MessageCircle className="w-6 h-6 text-white fill-white/30" />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <MessageCircle className="w-6 h-6 text-white fill-white/30" />
         </motion.div>
       </div>
 

@@ -162,6 +162,8 @@ function ChatView({ ticket, viewer, onUpdate }: { ticket: SupportTicket; viewer:
   const fileRef = useRef<HTMLInputElement>(null);
   const settings = getSupportSettings();
 
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
   const refreshMessages = useCallback(() => {
     setMessages(getMessages(ticket.id));
   }, [ticket.id]);
@@ -172,8 +174,14 @@ function ChatView({ ticket, viewer, onUpdate }: { ticket: SupportTicket; viewer:
     return () => clearInterval(id);
   }, [refreshMessages]);
 
+  // Only auto-scroll when user is near the bottom (within 140px)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distFromBottom < 140) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -220,7 +228,7 @@ function ChatView({ ticket, viewer, onUpdate }: { ticket: SupportTicket; viewer:
   return (
     <div className="flex flex-col h-full">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full space-y-2 py-10">
             <MessageCircle className="w-8 h-8 text-muted-foreground/30" />
